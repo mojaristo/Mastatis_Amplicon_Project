@@ -1,0 +1,518 @@
+---
+title: "01_QualityTrimming"
+author: "Jayden William Kgobe"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goals of this File
+0. Load packages and prepare for fastq files. 
+1. Use raw fastq files and generate quality plots to assess quality of raw reads.
+2. Evaluate whether primers are present in the sequences.
+3. Filter and trim out primers, bad sequences and bases from the sequencing files. 
+4. Assess if filtering and trimming was adequate. If not, re-run with new parameters.
+4. Write out fastq files with high quality sequences. 
+5. Evaluate the quality from the filter and trim step and whether it is adequate. 
+
+Output that are created in this file: 
+
+1. Quality plots to asses pre- and post-quality trimming. 
+2. Written files that include the filtered and trimmed data. (Note that this will be written during the `filterAndTrim()` function.)
+
+# Setting up the environment
+
+## Set the Seed
+```{r set-seed}
+set.seed(20125)
+
+```
+### Timing of the Script
+```{r rmd-start}
+start_time <- Sys.time()
+start_time
+
+```
+## Load Libraries
+```{r load-libraries}
+# Efficient package loading with pacman 
+pacman::p_load(tidyverse, dada2, patchwork, 
+               devtools, Biostrings, ShortRead,
+               install = FALSE)
+```
+
+# 0. Prepare Raw fastq Files
+```{r load-data}
+# Set the raw fastq path to the raw sequencing files 
+# Path to the fastq files 
+raw_fastqs_path <- "data/00_raw_gzipped_fastqs"
+raw_fastqs_path
+
+#Intuition Check
+head(list.files(raw_fastqs_path))
+length(list.files(raw_fastqs_path))
+
+# Create vector of forward reads
+forward_reads <- list.files(raw_fastqs_path, 
+                            pattern = "*_1.fastq.gz",
+                            full.names = TRUE)
+
+#Intuition Check
+head(forward_reads)
+length(forward_reads)
+
+
+# Create vector of reverse reads
+reverse_reads <- list.files(raw_fastqs_path, 
+                            pattern = "*_2.fastq.gz",
+                            full.names = TRUE)
+
+#Intuition Check
+head(reverse_reads)
+length(reverse_reads)
+
+```
+
+# 1. Asses Raw Read Quality
+
+## Evaluation of raw sequence quality
+
+## Plot 12 random sample plots
+```{r raw-quality-plot, fig.width=12, fig.height=8}
+# Randomly select 12 samples from dataset to evaluate
+random_samples <-
+  sample(1:length(reverse_reads), size = 12)
+
+# Calculate and plot quality of these two samples
+forward_filteredQual_plot_12 <- plotQualityProfile(forward_reads[random_samples]) + 
+  labs(title = "Forward Read: Raw Quality")
+
+reverse_filteredQual_plot_12 <- plotQualityProfile(reverse_reads[random_samples]) + 
+  labs(title = "Reverse Read: Raw Quality")
+
+# Plot them together with patchwork
+forward_filteredQual_plot_12 + reverse_filteredQual_plot_12
+```
+In DADA2, quality filtering is crucial for obtaining reliable biological sequences. Below are the acceptable **Phred score** thresholds for DADA2 preprocessing:
+
+| **Q Score**   | **Error Probability**    | **DADA2 Interpretation**            |
+|--------------|------------------------|------------------------------------|
+| **40**        | 0.0001 (1 in 10,000) | Very high-quality , dream come true   | 
+| **≥30**     | ≤ 0.001 (1 in 1,000) | Excellent quality, keep                |
+| **25-30** | ~0.003 - 0.01        | Can be acceptable, but more important to trim low-quality tails |
+| **20-25** | ~0.01 - 0.03         | Lower quality, only acceptable if read length is absolutely critical |
+| **<20**    | > 0.01 (1 in 100)    | Poor quality, remove                    |
+| **<10**     | >0.1 (1 in 10)       | Very unreliable, absolutely remove      |
+---
+
+Some summary take-aways:
+
+- **30 is good** – Bases with Q30+ scores have a **99.9% accuracy rate**, making them highly reliable.  
+- **25-30 can be acceptable**, but trimming is preferred to remove low-quality tails.  
+- **20-25** should only be kept if read length is absolutely critical (*e.g.* to ensure forward & reverse read overlap)
+- **<20 discarded** – Bases with Phred scores below 20 have an **error rate >1%** and should 100% be **trimmed from the dataset**.  
+## Aggregatted Raw Quality Plots
+
+```{r raw-aggregate-plot, fig.width=5.5, fig.height=3.5}
+# Aggregate all QC plots 
+# Forward reads
+forward_preQC_plot <- 
+  plotQualityProfile(forward_reads, aggregate = TRUE) + 
+  labs(title = "Forward Pre-QC")
+
+# reverse reads
+reverse_preQC_plot <- 
+  plotQualityProfile(reverse_reads, aggregate = TRUE) + 
+  labs(title = "Reverse Pre-QC")
+
+# Two plots together
+preQC_aggregate_plot <- 
+  # Plot the forward and reverse together 
+  forward_preQC_plot + reverse_preQC_plot
+# Show the plot
+preQC_aggregate_plot
+```
+<span style="color: red;">INTERPRETATION #1 of Pre-QC: Here, in this location of your analyses, please insert a description of the interpretation you draw regarding your plots. You must note anything important about the figure you've created about your data including any spikes in quality and also the general trend of the raw QC plots.</span> 
+
+Above are plots showing the pre-QC quality scores of the raw sequencing data for the project with 60 aggregated files and ~3.07 million reads).  We can draw a few conclusions from the plots above; 
+
+1.	*Early Bases (~Cycle 0-10):*
+    - Both reverse and forward reads show small fluctuations in the first ~5-10 bases with thes initial bases being of mostly high quality (~Q30-35).
+    - **Interpretation**: There is minor variability at the start, but not severe enough to strongly justify aggressive trimming based solely on quality.
+    
+2.	*Mid-Read Bases (~Cycle 10-200):*
+    - The majority of both forward and reverse reads maintain consistently high quality (Q35–40).
+
+    - The median (green line) remains flat and high, indicating reliable base calling across most of the read
+    - **Interpretation**: This region represents the most reliable portion of the sequencing data and should be retained.
+
+3. 	*End of Read Bases (~Cycle 200-300):*
+    - Both forward and reverse reads show a gradual decline in quality toward the end.
+
+    - The reverse reads degrade more severely, with quality dropping below Q30 earlier (~220–240 cycles) and showing increased variability.
+
+    - The forward reads decline more gradually, staying closer to Q30 until later cycles (~260–280).
+
+    - There is a sharp drop in both reads at the very end (~last 5–10 bases), reaching extremely low quality (Q < 10).
+
+    - **Interpretation**: These terminal bases are unreliable and should be trimmed.
+  
+
+# 2. Evaluate Primer Search
+
+```{r search-primers-test}
+# Search the sequences for primers to check if they are present
+# Pull out the raw_fastq sequences from all of the raw sequencing files 
+raw_fastqs <- readFastq(dirPath = raw_fastqs_path)
+# The above code makes a complex S3 object.Let's only grab the DNA sequences 
+
+all_seqs <- sread(raw_fastqs)
+
+f_primer <- c("ACTCCTACGGGAGGCAGCAG")
+r_primer <- c("GGACTACHVGGGTWTCTAAT")
+
+# Search the dataset 
+# Check the complement of the primers.... 
+Fprimer_complement <- complement(DNAString(f_primer))
+Fprimer_revComplement <- reverseComplement(DNAString(f_primer))
+
+Rprimer_complement <- complement(DNAString(r_primer))
+Rprimer_revComplement <- reverseComplement(DNAString(r_primer))
+
+# Test an example on one sequence randomly selected from a forward read fastq file
+test_DNAseq <- all_seqs[[sample(length(all_seqs), 1)]]
+
+# Test code now 
+matchPattern(pattern = "ANAGA", # Part of the test seq with degeneracy
+             subject = test_DNAseq, 
+             # NOTE: fixed MUST = FALSE because the primers have degeneracy 
+             fixed = FALSE)
+
+############ POSITIVE CONTROLS OF CODE TO MAKE SURE IT WORKS ############ 
+# Let's use a sequence that is very conserved and def present
+# Postive control intuition check 
+pos_control <-
+  vcountPattern(pattern = "GTACTTACTCCTACGG", # This is a pattern that I know is in the sequences
+                subject = all_seqs, 
+                fixed = FALSE)
+
+# Make a note 
+paste("Positive control is found in", round(sum(pos_control)/length(all_seqs) * 100, digits = 2),
+      "% of sequences") 
+
+# When there is a match, vmatchPattern can be used to locate the indices of the matches 
+test_pos_control <- 
+  vmatchPattern(pattern = "GTACTTACTCCTACGG", 
+                subject = all_seqs, 
+                fixed = FALSE)
+
+# Take a look 
+head(test_pos_control)
+
+# And double check the degenerate nucleotides are ok within these functions, too 
+pos_degen_control <-
+  vcountPattern(pattern = "GTGYC", 
+                subject = all_seqs, 
+                fixed = FALSE)
+
+# Make a note :) 
+paste("Positive control with a degenerate base is found in", round(sum(pos_degen_control)/length(all_seqs) * 100, digits = 2), "% of sequences") 
+
+stopifnot(sum(pos_degen_control) > round(sum(pos_control)))
+
+```
+
+Now, let's specifically test for the **forward** primers: 
+
+```{r forward-primers}
+############ FORWARD PRIMERS ############ 
+# Now, let's search the sequences for the primers
+# Search first for forward primer 
+Fprimer_vmatch <- 
+  vcountPattern(pattern = f_primer, 
+                subject = all_seqs, 
+                fixed = FALSE); 
+# Note: 
+paste("The forward primer is found in", round(sum(Fprimer_vmatch)/length(all_seqs) * 100, digits = 2),
+      "% of sequences") 
+
+
+# Then double check with complement of forward primer 
+Fprimer_complement_vmatch <- 
+  vcountPattern(pattern = Fprimer_complement, 
+                subject = all_seqs, 
+                fixed = FALSE); 
+# Note: 
+paste("The complement of the forward primer is found in", round(sum(Fprimer_complement_vmatch)/length(all_seqs) * 100, digits = 2),
+      "% of sequences") 
+```
+Great, now let's specifically test for the **reverse** primers: 
+
+```{r reverse-primers}
+############ REVERSE PRIMERS ############ 
+# Now, let's search for the reverse primer 
+Rprimer_vmatch <- 
+  vcountPattern(pattern = r_primer, 
+                subject = all_seqs, 
+                fixed = FALSE); 
+paste("The reverse primer is found in", round(sum(Rprimer_vmatch)/length(all_seqs) * 100, digits = 2),
+      "% of sequences") 
+
+# Then double check with complement of forward primer 
+Rprimer_complement_vmatch <- 
+  vcountPattern(pattern = Rprimer_complement, 
+                subject = all_seqs, 
+                fixed = FALSE); 
+paste("The complement of reverse primer is found in", round(sum(Rprimer_complement_vmatch)/length(all_seqs) * 100, digits = 2),
+      "% of sequences") 
+```
+<span style="color: red;">INTERPRETATION #2 — Primer Evaluation: Based on the primer search results above, determine whether primer sequences are present in your dataset. Explain your conclusion and describe how the presence or absence of primers will influence the parameters used in the filterAndTrim() step.</span> 
+
+1 *Primers Present*
+  - forward primer is "ACTCCTACGGGAGGCAGCAG"
+  - reverse primer is "GGACTACHVGGGTWTCTAAT"
+  
+2 *Description*
+  - Nearly 50% of samples detected for both the the forward primers and the reverse primers. This means that a substantial portion of reads still contain primer sequences.
+  - The presence of primers in nearly half of the reads is significant and requires removal prior to downstream analysis. Retaining primer sequences can introduce bias in sequence inference, negatively impact taxonomic classification, and interfere with DADA2 pipelines
+  -To address this, the filterAndTrim() parameters should include trimming of the primer regions using trimLeft. Since the forward and reverse primers are known to be 19 bp and 20 bp long, respectively, using trimLeft = c(20,20) ensures that primer sequences are removed from all reads
+  
+
+# 3. Filter and Trim
+
+## A. Prepare a placeholder for filtered reads
+
+```{r prep-filtered-sequences}
+
+# Intuition Check: Length of the first 10 sequences
+
+fqF <- readFastq(forward_reads[1])
+fqR <- readFastq(reverse_reads[1])
+
+width(sread(fqF))[1:10]
+width(sread(fqR))[1:10]
+
+# Create vector of sample names from the filenames 
+sample_names <- sapply(strsplit(basename(forward_reads), "_"), `[`,1) 
+
+# Intuition Check 
+head(sample_names)
+
+# Place filtered reads into filtered_fastqs_path
+filtered_fastqs_path <- "data/01_QualityTrimming/filtered_fastqs"
+
+# Intuition Check 
+filtered_fastqs_path
+
+# create 2 vectors: filtered_forward_reads & filtered_reverse_reads
+filtered_forward_reads <- 
+  file.path(filtered_fastqs_path, paste0(sample_names, "_1_filtered.fastq.gz"))
+
+# Intuition Check 
+length(filtered_forward_reads)
+
+# reverse reads
+filtered_reverse_reads <- 
+  file.path(filtered_fastqs_path, paste0(sample_names, "_2_filtered.fastq.gz"))
+
+# Intuition Check
+head(filtered_forward_reads)
+head(filtered_reverse_reads)
+```
+
+## B. Actual Filterand Trim Reads
+
+```{r filter-and-trim}
+filtered_reads <- 
+  filterAndTrim(forward_reads,    filtered_forward_reads,
+              reverse_reads, filtered_reverse_reads,
+              truncLen = c(280,250), trimLeft = c(20,20),
+              maxN = 0, maxEE = c(1,1), truncQ = 2, 
+              rm.phix = TRUE, compress = TRUE, 
+              # Please set threads to be 8-10 (we want to respect others using the server!)
+              # Note that if TRUE, it will use ALL threads (making it hard for others to use the server)
+              multithread = 10)
+```
+<span style="color: red;">RATIONALE: Explain the reasoning behind the parameters you selected for the filterAndTrim() step. In your answer, reference relevant patterns from your FastQC or MultiQC reports (e.g., quality score drop-off, adapter/primer signal, read length distribution) that informed your trimming and filtering decisions. You may also cite guidance from the DADA2 workflow. Why were these parameter values appropriate for your dataset?</span> 
+
+1. *Description*
+  - In this case i used trimLeft = c(20,20) because both the forward and reverse primers are 20 bases long. Therefore, trimming the first 20 bases from both forward and reverse reads was an appropriate way to remove this contamination uniformly across the dataset before denoising and taxonomic analysis.
+  - With regard to the trunLen; trunLen = c(280,250) was chosen becasue based on the preQC quality scores since it truncates the reads at positions where quality begins to decline, retaining 280 bases for forward reads and 250 bases for reverse reads. This approach removes low-quality bases at the end of reads while preserving the high-quality portion necessary for downstream analysis.
+  
+ 
+  
+## C. Plot Filtered & Trimmed Read Quality of Subset of Samples
+
+```{r filterTrim-quality-plots,  fig.width=12, fig.height=8}
+# Plot the 12 random samples after QC
+forward_filteredQual_plot_12 <- 
+  plotQualityProfile(filtered_forward_reads[random_samples]) + 
+  labs(title = "Trimmed Forward Read Quality")
+
+reverse_filteredQual_plot_12 <- 
+  plotQualityProfile(filtered_reverse_reads[random_samples]) + 
+  labs(title = "Trimmed Reverse Read Quality")
+
+# Put the two plots together 
+forward_filteredQual_plot_12 + reverse_filteredQual_plot_12
+```
+
+## D. Plot Aggregated Filtered & Trimmed Plots of All Samples
+
+```{r qc-aggregate-plot, fig.width=5.5, fig.height=3.5}
+# Aggregate all QC plots 
+# Forward reads
+forward_postQC_plot <- 
+  plotQualityProfile(filtered_forward_reads, aggregate = TRUE) + 
+  labs(title = "Forward Post-QC")
+
+# reverse reads
+reverse_postQC_plot <- 
+  plotQualityProfile(filtered_reverse_reads, aggregate = TRUE) + 
+  labs(title = "Reverse Post-QC")
+
+# Now, let's put the two plots together
+postQC_aggregate_plot <- 
+  # Plot the forward and reverse together 
+  forward_postQC_plot + reverse_postQC_plot
+# Show the plot
+postQC_aggregate_plot
+```
+
+## E. Save Filtered Reads Data 
+
+```{r save-filtered-reads-data}
+# SAVE DATA FIRST 
+save(filtered_reads, file = "data/01_QualityTrimming/filtered_reads.RData")
+```
+<span style="color: red;">INTERPRETATION #3 of Post-QC: Here, in this location of your analyses, please insert a description of the interpretation you draw regarding your post filterAndTrim plots. Please note anything important about the figure you've created about your data generally speaking to your post-QC reads. What's the general trend? In the next question, we will plot the pre- and post-QC togeter and compare them. The goal here is to evaluate the QC process.</span> 
+
+The above post-QC quality score plot from 60 aggregated Illumina sequencing files shows the forward (left) and reverse (right) reads after quality filtering and trimming. The post-QC plots show that read quality is consistently high across both forward and reverse reads after filtering and trimming. The majority of bases now maintain quality scores between Q35–40 throughout the read length.
+
+Beginning of reads: The initial variability observed in the pre-QC plots has been removed, indicating that trimming (trimLeft = c(20,20)) successfully eliminated low-quality bases and residual primer sequences.
+Middle of reads: Quality remains extremely stable across most cycles, showing that high-quality sequence information has been preserved.
+End of reads: The sharp decline in quality previously observed at the ends of reads has been effectively removed, especially in the reverse reads, due to truncation (truncLen). There is only a slight and acceptable decline toward the end of the retained reads.
+
+- *Forward Reads Post-QC*
+  - High-quality (Q30) bases throughout most of the read length. This is consistent throughout all cycles
+- *Reverse Reads Post-QC*
+  - A significant improvement in Q score can be observed throughout all cycles. Most samples have >Q30. But not as good as the forward reads.
+
+Therefore, it quality filtering did help improve the quality of bases (especially for reverse reads)
+
+
+# 4. Assess if filtering and trimming was adequate. If not, re-run with new parameters. 
+
+### A. Read Retention Post-QC
+
+```{r filterTrim-stats, message = FALSE, fig.height = 2.5, fig.width=8}
+# Make output into dataframe 
+filtered_df <- as.data.frame(filtered_reads) %>%
+  mutate(percent.retained = reads.out/reads.in)
+
+# Intuition check
+# Visualize it in table format 
+DT::datatable(filtered_df)
+
+# Let's calculate some statistics
+read_stats_df <- 
+  filtered_df %>%
+  reframe(median_reads_in = median(reads.in),
+          median_reads_out = median(reads.out),
+          median_percent_retained = (median(reads.out)/median(reads.in)),
+          max_percent_retained = max(reads.out/reads.in),
+          min_percent_retained = min(reads.out/reads.in))
+
+# Take a look at it!
+read_stats_df
+
+# Plot it 
+numSeqs_QC_dotplot <-
+  filtered_df %>%
+  ggplot(aes(x = reads.in, y = reads.out)) + 
+  geom_point(alpha = 0.5, size = 2) + 
+  labs(x = "# of Raw Seqs", 
+       y = "# of Seqs Retained") + 
+  # Now let's add a 1:1 line for reference of keeping 100% of the reads
+  geom_abline(slope=1, intercept = 0, color = "deeppink")
+
+# Now, let's look at the number of reads retained in a histogram
+numRetained_QC_histplot <- 
+  filtered_df %>%
+  ggplot(aes(x = reads.out)) + 
+  geom_histogram() + 
+  labs(x = "# of Seqs Retained", 
+       y = "# of Samples") 
+
+# Create a histogram of percent reads retained in a histogram
+percSeqs_QC_histplot <- 
+  filtered_df %>%
+  ggplot(aes(x = percent.retained)) + 
+  geom_histogram() + 
+  labs(x = "% of Seqs Retained", 
+       y = "# of Samples") + 
+  # Set the scale to be between 0-1 (0-100%)
+  scale_x_continuous(limits = c(0, 1))
+
+# Now, let's put the plots together
+numSeqs_QC_dotplot + numRetained_QC_histplot + percSeqs_QC_histplot + 
+  plot_annotation(tag_levels = 'A')
+```
+<span style="color: red;">INTERPRETATION #4 of Post-QC Statistics: Here, in this location of your analyses, please insert a description of the interpretation you draw regarding your read retainment pre- and post-QC. Please note anything important about the three paneled figure you created above. Think about how many reads got through? Is it "enough"? Should I play with the parameters in `filterAndTrim()` more?  If so, which parameters? </span> 
+
+- The post-QC filtering results show that a substantial proportion of reads were retained after quality control. Specifically, the total number of reads decreased from 3,072,603 (pre-QC) to 2,541,243 (post-QC), corresponding to a retention rate of approximately 82.7%. This indicates that the majority of sequences passed the filtering criteria, suggesting that the raw sequencing data was already of relatively high quality.
+- Both forward and reverse reads exhibit consistently high quality scores (~Q30) across all retained cycles after QC. The post-QC plots show nearly flat, high-quality profiles with minimal variability, indicating that low-quality tails and problematic reads were effectively removed through the chosen parameters (truncLen = c(280,250), trimLeft = c(29,20), maxEE = c(1,1)).
+- Overall, the chosen filtering parameters are well-justified and result in high-quality, sufficiently abundant data for downstream analysis.
+-Panel A (Raw vs Retained Reads): There is a linear relationship between raw and retained reads, indicating that samples were filtered consistently without disproportionately losing reads from specific samples.
+-Panel B (# of Seqs Retained): Most samples retain a high number of reads (generally 35,000–55,000), suggesting sufficient sequencing depth across samples.
+-Panel C (% Retained): The majority of samples cluster around 90% retention, showing that filtering was not aggressive.
+### B. Visualize QC differences Pre- and Post-Filering & Trimming 
+```{r pre-post-QC-plot, fig.width=6, fig.height=5.5}
+# Plot the pre and post together in one plot
+preQC_aggregate_plot / postQC_aggregate_plot
+```
+<span style="color: red;">INTERPRETATION #5 is comparing your pre-QC to your post-QC read quality. Here, in this location of your analyses, please insert a description of the interpretation you draw from yor overall quality control results. Are you satisfied with your QC process? An example interpretation is provided below. </span> 
+
+**Quality Score Improvements**
+
+- *Forward Reads (Pre vs. Post-QC)*
+  - Beginning of read: The first 20 bases were trimmed to remove primer sequences, which helps eliminate non-biological sequence and improves overall quality. Remaining bases at the start show high quality (>Q35).
+
+  - Middle of read: Quality is consistently high (Q30) with very little variability after QC.
+
+  -End of read: No significant drop-off is observed, indicating that truncation and filtering successfully removed low-quality tails.
+  
+- *Reverse Reads (Pre vs. Post-QC)*
+
+  -Beginning of read: The first 20 bases were trimmed to remove primers, improving read reliability at the start.
+
+  -Middle of read: Quality remains strong and stable across most cycles.
+
+  -End of read: There is a less of decline in the quality scores after QC treatement, however, it is still better than before so it is accepatble to proceed (>Q30).
+
+# Analysis Done
+
+# Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+# Session Information 
+```{r session-info}
+# Ensure reproducibility 
+devtools::session_info()
+```
+
+
+

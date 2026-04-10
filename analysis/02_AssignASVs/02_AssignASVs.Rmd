@@ -10,7 +10,7 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
                       fig.align = "center",
-                      fig.path = "../figures/02_AssignASVs")
+                      fig.path = "../../figures/02_AssignASVs")
 ```
 
 # Goals 
@@ -794,41 +794,8 @@ Let's save the `track_counts_df`, which can be useful for downstream analyses.
 # And save the track_counts_df a R object, which we will merge with metadata information in the next step of the analysis in nalysis/02_Taxonomic_Assignment. 
 save(track_counts_df, file = "data/02_AssignASVs/track_read_counts.RData")
 ```
-## 5. Metadata
 
-Before running the code below, be sure to copy over the file `/workdir/in_class_data/metadata_physeq.RData` to `Mastitis_Amplicon_Project/data`.
-
-```{r make-metadata}
-# After copying the file over, read it into R
-load("data/metadata_physeq.RData")
-
-# The command above will load in a new object called: 
-metadata_physeq
-
-# Check it out
-sample_names(metadata_physeq)
-# how many samples? 
-length(sample_names(metadata_physeq))
-```
-# Phyloseq S4 Object Creation 
-
-To start this section of this lesson, please make sure that you have phyloseq installed! 
-
-
-```{r make-phyloseq}
-# Construct the phyloseq object 
-raw_physeq <- phyloseq(otu_table(final_ASV_table, taxa_are_rows = TRUE),
-                       # The taxonomy table needs to first be converted into a matrix
-                       tax_table(as.matrix(ASV_tax_table)), 
-                       # Next, add the sample_data
-                       metadata_physeq)
-
-# Check the phyloseq object!
-raw_physeq
-
-# Now, save the phyloseq object, but use the correct path to your folder:
-save(raw_physeq, file = "data/02_AssignASVs/raw_physeq.RData")
-```
+[Metadata code has been ommited]
 # Final info for Reproducibility 
 
 ## Check Render Time

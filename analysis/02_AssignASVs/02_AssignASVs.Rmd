@@ -236,31 +236,12 @@ write.table(raw_ASV_table, file = "data/02_AssignASVs/raw_ASV_counts.tsv",
 
 ## What are the current ASV lengths? 
 
-First, let's inspect the distribution of the ASV sequence lengths across all of the ASVs that we have inferred. First, we need to consider: **What is the expected length of the ASVs?** 
+First, let's inspect the distribution of the ASV sequence lengths across all of the ASVs that we have inferred. 
 
-1. *What is the sequencing strategy?*
-    - paired-end 250bp (2x300bp) Illumina MiSeq Sequencing was used.
-    - Specifically, the V3-V4 hypervariable region of the 16S rRNA gene was targeted for sequencing with the 338F and 806R primers. 
-2. *What's the total length of our starting amplicons?* 
-    - Our primers are named after the location they bind to on the 16S gene. So: 
-    - `806 - 338 = 468` 
-    - The total length of the starting amplicon is 468 base pairs, with primers.
-3. *What is the ASV length without primers?* 
-    - The 338F (`ACTCCTACGGGAGGCAGCAG`) primer is 20 base pairs. 
-    - The 806R (`GGACTACHVGGGTWTCTAAT`) primer is 20 base pairs. 
-    - `468 - 20 - 20 = 428` 
-    - The expected ASV length without primers is **428 base pairs**. 
-    - **IMPORTANT:** Remember, we did not sequence the primers in our current example, because the [Kozich et al., 2013](https://journals.asm.org/doi/10.1128/aem.01043-13) library prep was used. However, if the regular Illumina 2-step library preparation approach was used, the primers will be sequenced!
-4. *What is the length of the trimmed ASVs after `filterAndTrim()`?* 
-    - In our `01_QualityTrimming.Rmd`, we used `trimLeft = 20` to remove the bases at the beginning of the forward read and `truncLen = c(280,250)`, which removed 20 bases from the forward read length and removed 50 bases at the end of the reverse read. Therefore: 
-    - `428 - 20 = 408`
-5. *What is the overlap between our forward and reverse reads?*
-    - We performed 2x300 paired-end Illumina MiSeq Sequencing. However, from our multiQC report, we can see that our read length is actually 251 bp. 
-    - If we have a total read length of 251 base pairs and **we did not sequence our primers** (because we used the Kozich et al., 2013 AEM library preparation), then our overlap should be ~100%. 
-    
+
 <span style="color: red;">INTERPRETATION #1: What is the hypothesized ASV length for your project data set? Please insert a description here, similar to the statements above, of the expected ASV length. Please provide a clear explanation using the following, which an example is provided above: (1) sequencing strategy, (2) total length of starting amplicons, (3) the expected ASV length without the primers, (4) length expected after the filterAndTrim() step, and (5) the expected percent overlap.</span>
 
-**What is the expected length of the ASVs?** 
+
 
 1. *What is the sequencing strategy?*
     - paired-end 250bp (2x300bp) Illumina MiSeq Sequencing was used.
@@ -450,6 +431,12 @@ So, there is good retention of the ASVs after length trimming and chimera remova
 
 <span style="color: red;">INTERPRETATION #4: (1) What proportion of raw ASVs were retained after trimming? (2) What proportion of the trimmed ASVs were retained after chimera removal? (3) What proportion of the total merged ASVs were retained after both trimming and chimera removal? Do you think that the ASV lengths have been trimmed appropriately? For inspiration, you are encouraged to describe the conclusions from the the ASV length plot below.</span> 
 
+- (1) After trimming, 77% of the raw ASVs were retained, which suggests that the trimming procedure preserved most of the inferred sequences while still applying reasonable quality control.
+- (2) After chimera removal, 84% of the trimmed ASVs were retained. This means that most of the trimmed ASVs were identified as biologically plausible sequences, while a smaller fraction were removed
+- (3) Overall, 64% of the total merged ASVs were retained after both trimming and chimera removal
+- Based on these proportions and the ASV length distribution, the ASV lengths appear to have been trimmed appropriately. Although the dominant ASV length was 436 bp rather than the hypothesized 428 bp, most ASVs clustered within a narrow range around that peak, with additional common lengths at 435, 437, 441, and 416 bps
+
+
 ### Plot ASV Lengths 
 
 ```{r plot-ASVLengths, fig.height=2.5, fig.width=7}
@@ -540,29 +527,23 @@ plot_ReadDepth + plot_ASVRichness + plot_ReadDepth_ASVRichness +
 
 The figure above consists of three plots that summarize sequencing depth, ASV richness, and their relationship after DADA2 processing of 16S rRNA gene sequencing data.
 
+<span style="color: red;">INTERPRETATION #5: What conclusions can you draw from each of the three individual plots above? Please note anything important that the figure might indicate regarding your project data. Are there any specific notes and considerations for later?</span> 
 **Panel A: Read Depth after DADA2:** Histogram of sequencing depth per sample (Total # of Sequences)
+- Sequencing depth is relatively consistent across samples, with most clustering between ~12,000–18,000 reads.
+- A few lower-depth samples may be under-sequenced, which could bias diversity estimates
+- 1 sample has more than 25000 sequences
 
-- The distribution is roughly unimodal, centered around 4,000–6,000 reads per sample.
-- One sample has very low read counts (~0 reads)
-- A couple of other samples have higher sequencing depth (>7,500 reads).
 
 **Panel B: ASV Richness after DADA2:** Histogram of ASV richness (Total # of ASVs per sample)
-
-- Most samples have ~100–175 ASVs, following a similar unimodal distribution as sequencing depth.
-- Some samples have very low ASV counts (< 50). *Perhaps this corresponds to low read depth?*
+- ASV richness varies across samples (~400–700 ASVs), indicating real biological variability in microbial diversity.
 
 **Panel C: Read Depth vs ASV Richness:** Scatter plot showing the relationship between sequencing depth and ASV richness.
 
-- Generally there might be a positive correlation, where samples with higher read depth tend to have more ASVs. This helps show the importance of rarefaction!
-- A few points deviate, particularly samples with low read depth and low ASVs, which could indicate sequencing failures, poor-quality samples, and/or negative controls.
+- There is a positive relationship between sequencing depth and ASV richness.
+- The trend begins to plateau at higher read counts, suggesting that most diversity is being captured at higher depths.
 
 **Overall Interpretation & Considerations**
-
-1.	*Sequencing depth variation*: Most samples cluster around a common sequencing depth, but at least one sample is definitely under-sequenced.
-2. *ASV richness follows read depth trends*: Low sequencing depth samples have lower ASV richness, potentially biasing ecological interpretations.
-3.	*Rarefaction or normalization may be needed*: The right plot suggests that richness estimates are influenced by read depth, so rarefying or using appropriate statistical corrections will be necessary for comparative analysis.
-
-<span style="color: red;">INTERPRETATION #5: What conclusions can you draw from each of the three individual plots above? Please note anything important that the figure might indicate regarding your project data. Are there any specific notes and considerations for later?</span> 
+1. *Rarefaction or normalization may be needed*: This is because in Panel A there is need for a more fair way of comparing the total number of sequences against the number of samples. This is further emphasized by observation in Panel C, since there seems to be a positive correlation between sequencing depth and ASV richness.
 
 # Assign Taxonomy 
 

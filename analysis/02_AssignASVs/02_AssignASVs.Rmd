@@ -795,7 +795,8 @@ Let's save the `track_counts_df`, which can be useful for downstream analyses.
 save(track_counts_df, file = "data/02_AssignASVs/track_read_counts.RData")
 ```
 
-[Metadata code has been ommited]
+
+```
 # Final info for Reproducibility 
 
 ## Check Render Time

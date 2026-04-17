@@ -431,8 +431,9 @@ numSeq_bar_plot + numSeq_hist_plot + numSeq_density_plot +
 <span style="color: red;">INTERPRETATION #5: What can you conclude about your sequencing depths? What are your sample distributions? Do you have "enough" reads? Are there any samples that should be removed at this step?</span>
 
 - Panel A: 
-    -Overall Read depth ranges from about 8000 to 25000. With many samples within 12000 and 18000.        - This is a good read depth therefore removal is not justified. There is sufficient sequencing depth for downstream diversity analysis
-- Panel B:
+    -Overall Read depth ranges from about 8000 to 25000. With many samples within 12000 and 18000.     
+    - This is a good read depth therefore removal is not justified. There is sufficient sequencing depth for downstream diversity analysis
+- Panel B and C:
     -The histogram and density plot show a roughly unimodal distribution
     -Slight right skew due to a few higher-depth samples (20000–25000)
 

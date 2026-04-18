@@ -207,13 +207,13 @@ iNEXT_input_df[1:5, 1:5]
 # Run iNEXT 
 # Remember to set the seed!
 # ASVs in ROWs, samples in COLUMNS 
-iNEXT_data <- iNEXT(iNEXT_input_df, 
-                   q = c(0, 1, 2),
-                   datatype = "abundance")
+#iNEXT_data <- iNEXT(iNEXT_input_df, 
+#                  q = c(0, 1, 2),
+#                   datatype = "abundance")
 
 # Save the object for later! 
 # Make the directory first in shell! Otherwise there will be an error
-save(iNEXT_data, file = "data/04_Biodiversity/iNEXT_data.RData")
+#save(iNEXT_data, file = "data/04_Biodiversity/iNEXT_data.RData")
 ```
 
 Since iNEXT takes a while to run, we will load in the data that was caluculated before! 
@@ -424,7 +424,7 @@ What hypothses does the Shapiro-Wilk Test?
 
 # Continuous Relationships 
 
-Here, we will test the continuous variable salinity (PSU) versus Biodiversity measures
+Here, we will test the continuous variable 
 
 ## Spearman vs. Linear Model: What’s the Difference?
 
@@ -437,21 +437,194 @@ Here, we will test the continuous variable salinity (PSU) versus Biodiversity me
 | **Output**               | Correlation coefficient (ρ) and p-value           | Intercept, slope(s), p-values, R², residuals, etc.       |
 | **Resistant to Outliers?** | More robust                                     | Sensitive to outliers                                    |
 | **Function in R**        | `cor.test(x, y, method = "spearman")`             | `lm(y ~ x)`                                              |
-# Environmental Variables 
+# Continuous Variables 
 
-```{r environ-check}
-# Create dataframe of environmental variables 
-env_df <- 
-  metadata_df %>%
-  dplyr::select(names, water_tempC:DO_mgL)
+```{r comptute-alpha}
 
-# Pair-wise interactions between env var
-pairs(dplyr::select(env_df, -names), upper.panel = NULL)
 
+
+#load otu_table
+load("data/03_PreProcessing/preprocessed_phyloseq.RData")
+
+noChlorosMitos_physeq <- get("preprocessed_physeq")
+
+#Intuition Check
+class(noChlorosMitos_physeq)
+noChlorosMitos_physeq
+phyloseq::otu_table(noChlorosMitos_physeq)
+
+# 2. Alpha diversity
+alpha_df <- 
+  phyloseq::estimate_richness(
+    noChlorosMitos_physeq,
+    measures = c("Observed", "Shannon", "Simpson")
+  ) %>%
+  tibble::rownames_to_column(var = "SampleID")
+
+# 3. Sequencing depth
+seqSums_df <- 
+  data.frame(TotalSeqs = phyloseq::sample_sums(noChlorosMitos_physeq)) %>%
+  tibble::rownames_to_column(var = "SampleID")
+
+# 4. Combine
+obs_div_df <- 
+  alpha_df %>%
+  dplyr::left_join(seqSums_df, by = "SampleID") %>%
+  tidyr::pivot_longer(
+    cols = c("Observed", "Shannon", "Simpson"),
+    names_to = "Order.q",
+    values_to = "qD"
+  )
+
+# 5. Label q values
+obs_div_df$Order.q <- dplyr::recode(
+  obs_div_df$Order.q,
+  "Observed" = "q = 0 (Richness)",
+  "Shannon"  = "q = 1 (Shannon)",
+  "Simpson"  = "q = 2 (Simpson)"
+)
+
+glimpse(obs_div_df)
     
 
+```
+
+# Environmental Data
+
+```{r env-data}
+# Create dataframe of continuous variables 
+env_df <- 
+  obs_div_df %>%
+  dplyr::select(SampleID, TotalSeqs, qD)
+
+# Pair-wise interactions between variables
+pairs(dplyr::select(env_df, -SampleID), upper.panel = NULL)
+```
+
+
+**NOTE!!**
+- There seems to be two groups in sample:
+    * Ones with a positive correlation
+    * One with no correlation
+    
+# Continuous Variable Plot
+
+```{r plot-cont-var}
+# How does biodiversity change over the sequencing depth gradient?
+obs_div_df %>%
+  ggplot(aes(x = TotalSeqs, y = qD)) + 
+  facet_wrap(.~Order.q, scales = "free") + 
+  geom_point() + 
+  labs(x = "Sequencing Depth (Total Reads)", y = "Alpha Diversity") +
+  stat_smooth(method = "lm", formula = y ~ x) + 
+  theme_bw()
+```
+
+### Explore Richness More
+
+```{r richness-vs-salinity}
+# Make a richness data frame
+richness_df <- 
+  obs_div_df %>%
+  dplyr::filter(Order.q == "q = 0 (Richness)")
+
+# Actually run the linear model
+rich_vs_depth_lm <- 
+  lm(qD ~ TotalSeqs, data = richness_df)
+
+# Show me the model results
+rich_vs_depth_lm
+
+# Type?
+class(rich_vs_depth_lm)
+
+# Summary of lm
+summary(rich_vs_depth_lm)
+```
+In the output:
+
+- **Coefficients** refer to the 𝛽’s
+- **Estimate** is the estimate of each coefficient
+- **Std. Error** is the standard error of the estimate
+- **t value** is the coefficient divided by its standard error
+- **Pr(>|t|)** is the p-value for the coefficient
+- The **residual standard error** is the estimate of the variance of 𝜖
+- **Degrees of freedom** is the sample size minus # of coefficients estimated
+- **R-squared** is (roughly) the proportion of variance in the outcome explained by the model, instead we should always report the **adjusted R-squared**, which takes into penalizes the addition of unnecessary predictors, which provides a more accurate measure of model fit.
+    - Note that the R-squared value will always increase/stay the same when you add more predictors, even if they are not relevant!
+- The **F-statistic** compares the fit of the model as a whole to the null model (with no covariates)
+    - When comparing models, we always want to take the model with the higher F-statistic because it indicates a stronger relationship between the predictor varaibles and the dependent variables, suggesting that the model is better. 
+    
+```{r plot-richness-sal, fig.height=4, fig.width=4, warning = FALSE}
+
+richness_df %>% 
+  ggplot(aes(x = TotalSeqs, y = qD)) + 
+  geom_point() + 
+  stat_smooth(method = "lm") + 
+  labs(x = "Sequencing Depth (Total Reads)", y = "# of ASVs") + 
+  theme_bw() + 
+  geom_label(aes(x = max(TotalSeqs)*0.6, y = max(qD)*0.75), hjust = 0, 
+             label = paste("Adj R2 = ",signif(summary(rich_vs_depth_lm)$adj.r.squared, 2),
+                           "\nIntercept =",signif(rich_vs_depth_lm$coef[[1]],3),
+                           " \nSlope =",signif(rich_vs_depth_lm$coef[[2]], 2),
+                           " \nP =",signif(summary(rich_vs_depth_lm)$coef[2,4], 2)))
+```
+## Spearman Correlation
+```{r rich-vs-salinity-spearman, fig.width=4, fig.height=4}
+richness_df %>% 
+  ggplot(aes(x = TotalSeqs, y = qD)) + 
+  geom_point() + 
+  labs(x = "Sequencing Depth (Total Reads)", y = "# of ASVs") + 
+  theme_bw() + 
+  ggpubr::stat_cor(method = "spearman")
+```
+
+<span style="color: red;">INTERPRETATION #4:  If you have continuous data, what can you conclude regarding the role that all ASVs (richess, q = 0) versus common ASVs (Shannon, q = 1) versus dominant ASVs (Simpson, q = 2) have on the biodiversity of your samples as it relates to your variable of interest?</span>
+
+**1. Richness: q = 0**
+- There is a strong positive linear relationship between sequencing depth and richness. This is because: 
+  *Slope = 0.026: richness increases as sequencing depth increases
+  *Adjusted R² = 0.69: sequencing depth explains a large portion of variation
+  *p < 2.2e-16: highly significant (I am doubtful of this p value...is it trully that low?)
+- This implies richness is highly sensitive to sequencing depth. As more reads are collected, more rare ASVs are detected. All ASVs (including rare taxa) strongly influence biodiversity estimates, but this relationship is largely driven by sequencing effort rather than true biological differences.
+
+**Shannon: q = 1**
+- There is a weaker, but, positive relationship as seen by a less steep slope. This implies common ASVs contribute to biodiversity patterns, but are less dependent on sequencing depth compared to richness.
+
+**Simpson: q = 2**
+- he relationship between sequencing depth and diversity is very weak as seen by flat lines. This emphasizes dominant taxa which are captured even at lower sequencing depths
+- Dominant ASVs have little dependence on sequencing depth, indicating that the core community structure is consistently captured across samples.
 
 
 
+<span style="color: red;">INTERPRETATION #5:  How did you statistically test your scientific question in Interpretation #4? Why?</span>
 
+**Linear Model**
+- We quantified the direction and strength of the relationship in order to estimate the effect size (slope) as wellas determine whether the relationship was statistically significant
+- here is a strong, statistically significant positive relationship between sequencing depth and observed richness. Observed by 
+  *Slope = 0.0256: richness increases with sequencing depth
+  *Adjusted R² = 0.69: sequencing depth explains ~69% of variation in richness
+
+**Spearman Correlation Test**
+- There is a strong monotonic relationship between sequencing depth and richness (ρ ≈ 0.87).
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
 

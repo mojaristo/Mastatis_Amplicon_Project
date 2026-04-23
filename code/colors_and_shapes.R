@@ -21,19 +21,18 @@ fraction_shapes <- c(
   "Whole" = 22,
   "Control" = 24)
 
-salinity_shapes <- c(
-  "Very Low" = 21,   # 
-  "Low"      = 22,   # 
-  "Mid"      = 23,   #  
-  "High"     = 24)    #  
+group_shapes <- c(
+  "J" = 21,   # 
+  "L"      = 22,   # 
+  "Y"      = 23)   #  
+
 
 ####### COLORS 
 # Update colors for salinity groups
-salinity_colors <- c(
-  "Very Low" = "#A8E6CE",   # light mint
-  "Low"      = "#56C1D3",   # aqua
-  "Mid"      = "#1E90FF",   # dodger blue
-  "High"     = "#08306B")    # deep navy
+group_colors <- c(
+  "J" = "#A8E6CE",   # light mint
+  "L"      = "#56C1D3",   # aqua
+  "Y"     = "#08306B")    # deep navy
 
 station_colors <- c(
   "Shipping Channel" = "#3F007D",  # Deep purple

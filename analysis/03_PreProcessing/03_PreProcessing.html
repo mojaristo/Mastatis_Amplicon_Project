@@ -11,7 +11,7 @@
 
 <meta name="author" content="Jayden William Kgobe" />
 
-<meta name="date" content="2026-04-16" />
+<meta name="date" content="2026-04-22" />
 
 <title>Preprocessing Data Analysis</title>
 
@@ -352,7 +352,7 @@ display: none;
 
 <h1 class="title toc-ignore">Preprocessing Data Analysis</h1>
 <h4 class="author">Jayden William Kgobe</h4>
-<h4 class="date">2026-04-16</h4>
+<h4 class="date">2026-04-22</h4>
 
 </div>
 
@@ -1631,12 +1631,14 @@ have “enough” reads? Are there any samples that should be removed at
 this step?</span></p>
 <ul>
 <li>Panel A: -Overall Read depth ranges from about 8000 to 25000. With
-many samples within 12000 and 18000. - This is a good read depth
-therefore removal is not justified. There is sufficient sequencing depth
-for downstream diversity analysis</li>
-<li>Panel B: -The histogram and density plot show a roughly unimodal
-distribution -Slight right skew due to a few higher-depth samples
-(20000–25000)</li>
+many samples within 12000 and 18000.
+<ul>
+<li>This is a good read depth therefore removal is not justified. There
+is sufficient sequencing depth for downstream diversity analysis</li>
+</ul></li>
+<li>Panel B and C: -The histogram and density plot show a roughly
+unimodal distribution -Slight right skew due to a few higher-depth
+samples (20000–25000)</li>
 </ul>
 </div>
 </div>
@@ -1645,13 +1647,581 @@ distribution -Slight right skew due to a few higher-depth samples
 <p>Finally, let’s save our phyloseq object, which we will use for the
 next step!</p>
 <pre class="r"><code># Please be sure to use the correct path to the appropriate directory in your file system
+
+#Pull metadata from phyloseq
+meta_df &lt;- data.frame(sample_data(noChlorosMitos_physeq))
+meta_df$SampleID &lt;- rownames(meta_df)
+
+#Split Sample.Name 
+meta_df &lt;- meta_df %&gt;%
+  separate(Sample.Name, into = c(&quot;Group&quot;, &quot;Replicate&quot;), sep = &quot;_&quot;)
+
+#Convert replicate to numeric
+meta_df$Replicate &lt;- as.numeric(meta_df$Replicate)
+
+#Put metadata back into phyloseq
+rownames(meta_df) &lt;- meta_df$SampleID
+sample_data(noChlorosMitos_physeq) &lt;- sample_data(meta_df)
+
+#Check
+sample_data(noChlorosMitos_physeq)</code></pre>
+<pre><code>##             Assay.Type AvgSpotLen    Bases  BioProject    BioSample
+## SRR12873146   AMPLICON        602 35796726 PRJNA669201 SAMN16456667
+## SRR12873147   AMPLICON        602 34279084 PRJNA669201 SAMN16456670
+## SRR12873148   AMPLICON        602 34860616 PRJNA669201 SAMN16456666
+## SRR12873149   AMPLICON        602 34168316 PRJNA669201 SAMN16456665
+## SRR12873150   AMPLICON        602 35598668 PRJNA669201 SAMN16456664
+## SRR12873151   AMPLICON        602 23012654 PRJNA669201 SAMN16456717
+## SRR12873152   AMPLICON        602 29750238 PRJNA669201 SAMN16456716
+## SRR12873153   AMPLICON        602 23218538 PRJNA669201 SAMN16456715
+## SRR12873154   AMPLICON        602 23328704 PRJNA669201 SAMN16456714
+## SRR12873155   AMPLICON        602 24187758 PRJNA669201 SAMN16456713
+## SRR12873156   AMPLICON        602 18599994 PRJNA669201 SAMN16456712
+## SRR12873157   AMPLICON        602 18533774 PRJNA669201 SAMN16456711
+## SRR12873158   AMPLICON        602 18607820 PRJNA669201 SAMN16456710
+## SRR12873159   AMPLICON        602 22785098 PRJNA669201 SAMN16456709
+## SRR12873160   AMPLICON        602 30685144 PRJNA669201 SAMN16456708
+## SRR12873161   AMPLICON        602 37384200 PRJNA669201 SAMN16456663
+## SRR12873162   AMPLICON        602 26742044 PRJNA669201 SAMN16456707
+## SRR12873163   AMPLICON        602 31252228 PRJNA669201 SAMN16456706
+## SRR12873164   AMPLICON        602 30582202 PRJNA669201 SAMN16456705
+## SRR12873165   AMPLICON        602 30643004 PRJNA669201 SAMN16456704
+## SRR12873166   AMPLICON        602 23800070 PRJNA669201 SAMN16456703
+## SRR12873167   AMPLICON        602 29522080 PRJNA669201 SAMN16456669
+## SRR12873168   AMPLICON        602 30097592 PRJNA669201 SAMN16456668
+## SRR12873169   AMPLICON        602 32681376 PRJNA669201 SAMN16456659
+## SRR12873170   AMPLICON        602 31068016 PRJNA669201 SAMN16456658
+## SRR12873171   AMPLICON        602 27076154 PRJNA669201 SAMN16456702
+## SRR12873172   AMPLICON        602 25949210 PRJNA669201 SAMN16456701
+## SRR12873173   AMPLICON        602 31446072 PRJNA669201 SAMN16456700
+## SRR12873174   AMPLICON        602 38850070 PRJNA669201 SAMN16456699
+## SRR12873175   AMPLICON        602 34431390 PRJNA669201 SAMN16456698
+## SRR12873176   AMPLICON        602 33317088 PRJNA669201 SAMN16456662
+## SRR12873177   AMPLICON        602 28929712 PRJNA669201 SAMN16456697
+## SRR12873178   AMPLICON        602 35286230 PRJNA669201 SAMN16456696
+## SRR12873179   AMPLICON        602 36682268 PRJNA669201 SAMN16456695
+## SRR12873180   AMPLICON        602 28815934 PRJNA669201 SAMN16456694
+## SRR12873181   AMPLICON        602 32849334 PRJNA669201 SAMN16456693
+## SRR12873182   AMPLICON        602 39233544 PRJNA669201 SAMN16456692
+## SRR12873183   AMPLICON        602 30118662 PRJNA669201 SAMN16456691
+## SRR12873184   AMPLICON        602 35416262 PRJNA669201 SAMN16456690
+## SRR12873185   AMPLICON        602 36700930 PRJNA669201 SAMN16456689
+## SRR12873186   AMPLICON        602 44144660 PRJNA669201 SAMN16456688
+## SRR12873187   AMPLICON        602 32803582 PRJNA669201 SAMN16456661
+## SRR12873188   AMPLICON        602 36134448 PRJNA669201 SAMN16456687
+## SRR12873189   AMPLICON        602 28620284 PRJNA669201 SAMN16456686
+## SRR12873190   AMPLICON        602 27144782 PRJNA669201 SAMN16456685
+## SRR12873191   AMPLICON        602 23881942 PRJNA669201 SAMN16456684
+## SRR12873192   AMPLICON        602 33904038 PRJNA669201 SAMN16456683
+## SRR12873193   AMPLICON        602 29920002 PRJNA669201 SAMN16456682
+## SRR12873194   AMPLICON        602 27872600 PRJNA669201 SAMN16456681
+## SRR12873195   AMPLICON        602 32608534 PRJNA669201 SAMN16456680
+## SRR12873196   AMPLICON        602 29073590 PRJNA669201 SAMN16456679
+## SRR12873197   AMPLICON        602 26961172 PRJNA669201 SAMN16456678
+## SRR12873198   AMPLICON        602 36384278 PRJNA669201 SAMN16456660
+## SRR12873199   AMPLICON        602 26719168 PRJNA669201 SAMN16456677
+## SRR12873200   AMPLICON        602 35701008 PRJNA669201 SAMN16456676
+## SRR12873201   AMPLICON        602 38146332 PRJNA669201 SAMN16456675
+## SRR12873202   AMPLICON        602 33821564 PRJNA669201 SAMN16456674
+## SRR12873203   AMPLICON        602 37513028 PRJNA669201 SAMN16456673
+## SRR12873204   AMPLICON        602 29191582 PRJNA669201 SAMN16456672
+## SRR12873205   AMPLICON        602 32871608 PRJNA669201 SAMN16456671
+##                          BioSampleModel    Bytes                  Center.Name
+## SRR12873146 Metagenome or environmental 17643438 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873147 Metagenome or environmental 16964323 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873148 Metagenome or environmental 17192858 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873149 Metagenome or environmental 16798896 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873150 Metagenome or environmental 17521879 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873151 Metagenome or environmental 11333323 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873152 Metagenome or environmental 14834470 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873153 Metagenome or environmental 11401511 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873154 Metagenome or environmental 11599893 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873155 Metagenome or environmental 11924046 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873156 Metagenome or environmental  9147427 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873157 Metagenome or environmental  9093086 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873158 Metagenome or environmental  9202168 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873159 Metagenome or environmental 11224350 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873160 Metagenome or environmental 15094144 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873161 Metagenome or environmental 18600639 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873162 Metagenome or environmental 13310219 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873163 Metagenome or environmental 15408426 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873164 Metagenome or environmental 15049347 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873165 Metagenome or environmental 15124282 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873166 Metagenome or environmental 11573287 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873167 Metagenome or environmental 14535414 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873168 Metagenome or environmental 14751536 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873169 Metagenome or environmental 15896658 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873170 Metagenome or environmental 15458047 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873171 Metagenome or environmental 13409265 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873172 Metagenome or environmental 12987160 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873173 Metagenome or environmental 15856778 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873174 Metagenome or environmental 19033691 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873175 Metagenome or environmental 16837268 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873176 Metagenome or environmental 16393227 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873177 Metagenome or environmental 14381839 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873178 Metagenome or environmental 17471727 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873179 Metagenome or environmental 18207628 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873180 Metagenome or environmental 14372997 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873181 Metagenome or environmental 16307904 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873182 Metagenome or environmental 19459466 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873183 Metagenome or environmental 15027322 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873184 Metagenome or environmental 17554532 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873185 Metagenome or environmental 18100849 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873186 Metagenome or environmental 21918775 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873187 Metagenome or environmental 16131683 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873188 Metagenome or environmental 17607917 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873189 Metagenome or environmental 14355899 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873190 Metagenome or environmental 13582874 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873191 Metagenome or environmental 11975187 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873192 Metagenome or environmental 16662725 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873193 Metagenome or environmental 14672156 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873194 Metagenome or environmental 13565435 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873195 Metagenome or environmental 16202948 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873196 Metagenome or environmental 14377479 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873197 Metagenome or environmental 13296759 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873198 Metagenome or environmental 17938603 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873199 Metagenome or environmental 13054001 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873200 Metagenome or environmental 17750378 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873201 Metagenome or environmental 18837768 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873202 Metagenome or environmental 16664814 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873203 Metagenome or environmental 18374819 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873204 Metagenome or environmental 14517541 ANSHAN BIOTECHNOLOGY CO. LTD
+## SRR12873205 Metagenome or environmental 16130440 ANSHAN BIOTECHNOLOGY CO. LTD
+##             Collection_Date Consent DATASTORE.filetype DATASTORE.provider
+## SRR12873146         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873147         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873148         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873149         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873150         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873151         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873152         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873153         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873154         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873155         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873156         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873157         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873158         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873159         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873160         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873161         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873162         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873163         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873164         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873165         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873166         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873167         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873168         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873169         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873170         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873171         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873172         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873173         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873174         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873175         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873176         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873177         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873178         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873179         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873180         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873181         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873182         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873183         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873184         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873185         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873186         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873187         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873188         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873189         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873190         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873191         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873192         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873193         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873194         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873195         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873196         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873197         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873198         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873199         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873200         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873201         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873202         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873203         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873204         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+## SRR12873205         9/28/19  public   fastq,run.zq,sra         gs,ncbi,s3
+##                                 DATASTORE.region Experiment
+## SRR12873146 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339308
+## SRR12873147 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339289
+## SRR12873148 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339307
+## SRR12873149 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339306
+## SRR12873150 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339305
+## SRR12873151 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339304
+## SRR12873152 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339303
+## SRR12873153 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339302
+## SRR12873154 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339301
+## SRR12873155 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339300
+## SRR12873156 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339299
+## SRR12873157 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339298
+## SRR12873158 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339297
+## SRR12873159 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339296
+## SRR12873160 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339295
+## SRR12873161 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339294
+## SRR12873162 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339293
+## SRR12873163 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339292
+## SRR12873164 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339291
+## SRR12873165 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339290
+## SRR12873166 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339284
+## SRR12873167 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339288
+## SRR12873168 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339287
+## SRR12873169 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339286
+## SRR12873170 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339285
+## SRR12873171 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339283
+## SRR12873172 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339282
+## SRR12873173 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339281
+## SRR12873174 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339280
+## SRR12873175 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339279
+## SRR12873176 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339278
+## SRR12873177 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339277
+## SRR12873178 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339276
+## SRR12873179 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339275
+## SRR12873180 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339274
+## SRR12873181 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339273
+## SRR12873182 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339272
+## SRR12873183 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339271
+## SRR12873184 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339270
+## SRR12873185 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339269
+## SRR12873186 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339268
+## SRR12873187 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339267
+## SRR12873188 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339266
+## SRR12873189 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339265
+## SRR12873190 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339264
+## SRR12873191 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339263
+## SRR12873192 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339262
+## SRR12873193 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339261
+## SRR12873194 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339260
+## SRR12873195 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339259
+## SRR12873196 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339258
+## SRR12873197 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339257
+## SRR12873198 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339256
+## SRR12873199 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339255
+## SRR12873200 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339254
+## SRR12873201 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339253
+## SRR12873202 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339252
+## SRR12873203 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339251
+## SRR12873204 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339250
+## SRR12873205 gs.us-east1,ncbi.public,s3.us-east-1 SRX9339249
+##             geo_loc_name_country geo_loc_name_country_continent  geo_loc_name
+## SRR12873146                China                           Asia China:Beijing
+## SRR12873147                China                           Asia China:Beijing
+## SRR12873148                China                           Asia China:Beijing
+## SRR12873149                China                           Asia China:Beijing
+## SRR12873150                China                           Asia China:Beijing
+## SRR12873151                China                           Asia China:Beijing
+## SRR12873152                China                           Asia China:Beijing
+## SRR12873153                China                           Asia China:Beijing
+## SRR12873154                China                           Asia China:Beijing
+## SRR12873155                China                           Asia China:Beijing
+## SRR12873156                China                           Asia China:Beijing
+## SRR12873157                China                           Asia China:Beijing
+## SRR12873158                China                           Asia China:Beijing
+## SRR12873159                China                           Asia China:Beijing
+## SRR12873160                China                           Asia China:Beijing
+## SRR12873161                China                           Asia China:Beijing
+## SRR12873162                China                           Asia China:Beijing
+## SRR12873163                China                           Asia China:Beijing
+## SRR12873164                China                           Asia China:Beijing
+## SRR12873165                China                           Asia China:Beijing
+## SRR12873166                China                           Asia China:Beijing
+## SRR12873167                China                           Asia China:Beijing
+## SRR12873168                China                           Asia China:Beijing
+## SRR12873169                China                           Asia China:Beijing
+## SRR12873170                China                           Asia China:Beijing
+## SRR12873171                China                           Asia China:Beijing
+## SRR12873172                China                           Asia China:Beijing
+## SRR12873173                China                           Asia China:Beijing
+## SRR12873174                China                           Asia China:Beijing
+## SRR12873175                China                           Asia China:Beijing
+## SRR12873176                China                           Asia China:Beijing
+## SRR12873177                China                           Asia China:Beijing
+## SRR12873178                China                           Asia China:Beijing
+## SRR12873179                China                           Asia China:Beijing
+## SRR12873180                China                           Asia China:Beijing
+## SRR12873181                China                           Asia China:Beijing
+## SRR12873182                China                           Asia China:Beijing
+## SRR12873183                China                           Asia China:Beijing
+## SRR12873184                China                           Asia China:Beijing
+## SRR12873185                China                           Asia China:Beijing
+## SRR12873186                China                           Asia China:Beijing
+## SRR12873187                China                           Asia China:Beijing
+## SRR12873188                China                           Asia China:Beijing
+## SRR12873189                China                           Asia China:Beijing
+## SRR12873190                China                           Asia China:Beijing
+## SRR12873191                China                           Asia China:Beijing
+## SRR12873192                China                           Asia China:Beijing
+## SRR12873193                China                           Asia China:Beijing
+## SRR12873194                China                           Asia China:Beijing
+## SRR12873195                China                           Asia China:Beijing
+## SRR12873196                China                           Asia China:Beijing
+## SRR12873197                China                           Asia China:Beijing
+## SRR12873198                China                           Asia China:Beijing
+## SRR12873199                China                           Asia China:Beijing
+## SRR12873200                China                           Asia China:Beijing
+## SRR12873201                China                           Asia China:Beijing
+## SRR12873202                China                           Asia China:Beijing
+## SRR12873203                China                           Asia China:Beijing
+## SRR12873204                China                           Asia China:Beijing
+## SRR12873205                China                           Asia China:Beijing
+##             Host     Instrument isolation_source lat_lon Library.Name
+## SRR12873146 cows Illumina MiSeq            rumen missing         J_10
+## SRR12873147 cows Illumina MiSeq            rumen missing         J_13
+## SRR12873148 cows Illumina MiSeq            rumen missing          J_9
+## SRR12873149 cows Illumina MiSeq            rumen missing          J_8
+## SRR12873150 cows Illumina MiSeq            rumen missing          J_7
+## SRR12873151 cows Illumina MiSeq            rumen missing         Y_20
+## SRR12873152 cows Illumina MiSeq            rumen missing         Y_19
+## SRR12873153 cows Illumina MiSeq            rumen missing         Y_18
+## SRR12873154 cows Illumina MiSeq            rumen missing         Y_17
+## SRR12873155 cows Illumina MiSeq            rumen missing         Y_16
+## SRR12873156 cows Illumina MiSeq            rumen missing         Y_15
+## SRR12873157 cows Illumina MiSeq            rumen missing         Y_14
+## SRR12873158 cows Illumina MiSeq            rumen missing         Y_13
+## SRR12873159 cows Illumina MiSeq            rumen missing         Y_12
+## SRR12873160 cows Illumina MiSeq            rumen missing         Y_11
+## SRR12873161 cows Illumina MiSeq            rumen missing          J_6
+## SRR12873162 cows Illumina MiSeq            rumen missing         Y_10
+## SRR12873163 cows Illumina MiSeq            rumen missing          Y_9
+## SRR12873164 cows Illumina MiSeq            rumen missing          Y_8
+## SRR12873165 cows Illumina MiSeq            rumen missing          Y_7
+## SRR12873166 cows Illumina MiSeq            rumen missing          Y_6
+## SRR12873167 cows Illumina MiSeq            rumen missing         J_12
+## SRR12873168 cows Illumina MiSeq            rumen missing         J_11
+## SRR12873169 cows Illumina MiSeq            rumen missing          J_2
+## SRR12873170 cows Illumina MiSeq            rumen missing          J_1
+## SRR12873171 cows Illumina MiSeq            rumen missing          Y_5
+## SRR12873172 cows Illumina MiSeq            rumen missing          Y_4
+## SRR12873173 cows Illumina MiSeq            rumen missing          Y_3
+## SRR12873174 cows Illumina MiSeq            rumen missing          Y_2
+## SRR12873175 cows Illumina MiSeq            rumen missing          Y_1
+## SRR12873176 cows Illumina MiSeq            rumen missing          J_5
+## SRR12873177 cows Illumina MiSeq            rumen missing         L_20
+## SRR12873178 cows Illumina MiSeq            rumen missing         L_19
+## SRR12873179 cows Illumina MiSeq            rumen missing         L_18
+## SRR12873180 cows Illumina MiSeq            rumen missing         L_17
+## SRR12873181 cows Illumina MiSeq            rumen missing         L_16
+## SRR12873182 cows Illumina MiSeq            rumen missing         L_15
+## SRR12873183 cows Illumina MiSeq            rumen missing         L_14
+## SRR12873184 cows Illumina MiSeq            rumen missing         L_13
+## SRR12873185 cows Illumina MiSeq            rumen missing         L_12
+## SRR12873186 cows Illumina MiSeq            rumen missing         L_11
+## SRR12873187 cows Illumina MiSeq            rumen missing          J_4
+## SRR12873188 cows Illumina MiSeq            rumen missing         L_10
+## SRR12873189 cows Illumina MiSeq            rumen missing          L_9
+## SRR12873190 cows Illumina MiSeq            rumen missing          L_8
+## SRR12873191 cows Illumina MiSeq            rumen missing          L_7
+## SRR12873192 cows Illumina MiSeq            rumen missing          L_6
+## SRR12873193 cows Illumina MiSeq            rumen missing          L_5
+## SRR12873194 cows Illumina MiSeq            rumen missing          L_4
+## SRR12873195 cows Illumina MiSeq            rumen missing          L_3
+## SRR12873196 cows Illumina MiSeq            rumen missing          L_2
+## SRR12873197 cows Illumina MiSeq            rumen missing          L_1
+## SRR12873198 cows Illumina MiSeq            rumen missing          J_3
+## SRR12873199 cows Illumina MiSeq            rumen missing         J_20
+## SRR12873200 cows Illumina MiSeq            rumen missing         J_19
+## SRR12873201 cows Illumina MiSeq            rumen missing         J_18
+## SRR12873202 cows Illumina MiSeq            rumen missing         J_17
+## SRR12873203 cows Illumina MiSeq            rumen missing         J_16
+## SRR12873204 cows Illumina MiSeq            rumen missing         J_15
+## SRR12873205 cows Illumina MiSeq            rumen missing         J_14
+##             LibraryLayout LibrarySelection LibrarySource       Organism
+## SRR12873146        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873147        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873148        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873149        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873150        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873151        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873152        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873153        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873154        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873155        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873156        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873157        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873158        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873159        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873160        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873161        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873162        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873163        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873164        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873165        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873166        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873167        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873168        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873169        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873170        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873171        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873172        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873173        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873174        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873175        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873176        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873177        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873178        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873179        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873180        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873181        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873182        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873183        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873184        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873185        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873186        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873187        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873188        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873189        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873190        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873191        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873192        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873193        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873194        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873195        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873196        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873197        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873198        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873199        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873200        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873201        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873202        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873203        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873204        PAIRED              PCR   METAGENOMIC gut metagenome
+## SRR12873205        PAIRED              PCR   METAGENOMIC gut metagenome
+##             Platform          ReleaseDate          create_date version Group
+## SRR12873146 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     J
+## SRR12873147 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     J
+## SRR12873148 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     J
+## SRR12873149 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     J
+## SRR12873150 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     J
+## SRR12873151 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     Y
+## SRR12873152 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     Y
+## SRR12873153 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     Y
+## SRR12873154 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     Y
+## SRR12873155 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     Y
+## SRR12873156 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:57:00Z       1     Y
+## SRR12873157 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873158 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873159 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873160 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873161 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873162 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873163 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873164 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873165 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873166 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873167 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873168 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873169 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873170 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873171 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873172 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873173 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873174 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873175 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     Y
+## SRR12873176 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873177 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873178 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873179 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873180 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873181 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873182 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873183 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873184 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873185 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873186 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873187 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873188 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873189 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873190 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873191 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873192 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873193 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873194 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873195 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873196 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873197 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     L
+## SRR12873198 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873199 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873200 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873201 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873202 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873203 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873204 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T18:58:00Z       1     J
+## SRR12873205 ILLUMINA 2020-10-21T00:00:00Z 2020-10-21T19:00:00Z       1     J
+##             Replicate source_material_id SRA.Study    SampleID
+## SRR12873146        10                 10 SRP288032 SRR12873146
+## SRR12873147        13                 13 SRP288032 SRR12873147
+## SRR12873148         9                  9 SRP288032 SRR12873148
+## SRR12873149         8                  8 SRP288032 SRR12873149
+## SRR12873150         7                  7 SRP288032 SRR12873150
+## SRR12873151        20                 60 SRP288032 SRR12873151
+## SRR12873152        19                 59 SRP288032 SRR12873152
+## SRR12873153        18                 58 SRP288032 SRR12873153
+## SRR12873154        17                 57 SRP288032 SRR12873154
+## SRR12873155        16                 56 SRP288032 SRR12873155
+## SRR12873156        15                 55 SRP288032 SRR12873156
+## SRR12873157        14                 54 SRP288032 SRR12873157
+## SRR12873158        13                 53 SRP288032 SRR12873158
+## SRR12873159        12                 52 SRP288032 SRR12873159
+## SRR12873160        11                 51 SRP288032 SRR12873160
+## SRR12873161         6                  6 SRP288032 SRR12873161
+## SRR12873162        10                 50 SRP288032 SRR12873162
+## SRR12873163         9                 49 SRP288032 SRR12873163
+## SRR12873164         8                 48 SRP288032 SRR12873164
+## SRR12873165         7                 47 SRP288032 SRR12873165
+## SRR12873166         6                 46 SRP288032 SRR12873166
+## SRR12873167        12                 12 SRP288032 SRR12873167
+## SRR12873168        11                 11 SRP288032 SRR12873168
+## SRR12873169         2                  2 SRP288032 SRR12873169
+## SRR12873170         1                  1 SRP288032 SRR12873170
+## SRR12873171         5                 45 SRP288032 SRR12873171
+## SRR12873172         4                 44 SRP288032 SRR12873172
+## SRR12873173         3                 43 SRP288032 SRR12873173
+## SRR12873174         2                 42 SRP288032 SRR12873174
+## SRR12873175         1                 41 SRP288032 SRR12873175
+## SRR12873176         5                  5 SRP288032 SRR12873176
+## SRR12873177        20                 40 SRP288032 SRR12873177
+## SRR12873178        19                 39 SRP288032 SRR12873178
+## SRR12873179        18                 38 SRP288032 SRR12873179
+## SRR12873180        17                 37 SRP288032 SRR12873180
+## SRR12873181        16                 36 SRP288032 SRR12873181
+## SRR12873182        15                 35 SRP288032 SRR12873182
+## SRR12873183        14                 34 SRP288032 SRR12873183
+## SRR12873184        13                 33 SRP288032 SRR12873184
+## SRR12873185        12                 32 SRP288032 SRR12873185
+## SRR12873186        11                 31 SRP288032 SRR12873186
+## SRR12873187         4                  4 SRP288032 SRR12873187
+## SRR12873188        10                 30 SRP288032 SRR12873188
+## SRR12873189         9                 29 SRP288032 SRR12873189
+## SRR12873190         8                 28 SRP288032 SRR12873190
+## SRR12873191         7                 27 SRP288032 SRR12873191
+## SRR12873192         6                 26 SRP288032 SRR12873192
+## SRR12873193         5                 25 SRP288032 SRR12873193
+## SRR12873194         4                 24 SRP288032 SRR12873194
+## SRR12873195         3                 23 SRP288032 SRR12873195
+## SRR12873196         2                 22 SRP288032 SRR12873196
+## SRR12873197         1                 21 SRP288032 SRR12873197
+## SRR12873198         3                  3 SRP288032 SRR12873198
+## SRR12873199        20                 20 SRP288032 SRR12873199
+## SRR12873200        19                 19 SRP288032 SRR12873200
+## SRR12873201        18                 18 SRP288032 SRR12873201
+## SRR12873202        17                 17 SRP288032 SRR12873202
+## SRR12873203        16                 16 SRP288032 SRR12873203
+## SRR12873204        15                 15 SRP288032 SRR12873204
+## SRR12873205        14                 14 SRP288032 SRR12873205</code></pre>
+<pre class="r"><code>#Save
 preprocessed_physeq &lt;- 
   noChlorosMitos_physeq 
 
 preprocessed_physeq</code></pre>
 <pre><code>## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 4076 taxa and 60 samples ]
-## sample_data() Sample Data:       [ 60 samples by 34 sample variables ]
+## sample_data() Sample Data:       [ 60 samples by 35 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 4076 taxa by 9 taxonomic ranks ]</code></pre>
 <pre class="r"><code>save(preprocessed_physeq, file = &quot;data/03_PreProcessing/preprocessed_phyloseq.RData&quot;)</code></pre>
 </div>
@@ -1662,11 +2232,11 @@ preprocessed_physeq</code></pre>
 <pre class="r"><code># Take the time now that we are at the end of the script
 end_time &lt;- Sys.time()
 end_time </code></pre>
-<pre><code>## [1] &quot;2026-04-16 20:10:42 EDT&quot;</code></pre>
+<pre><code>## [1] &quot;2026-04-22 19:48:38 EDT&quot;</code></pre>
 <pre class="r"><code># Echo the elapsed time
 elapsed_time &lt;- round((end_time - start_time), 3)
 elapsed_time</code></pre>
-<pre><code>## Time difference of 22.621 secs</code></pre>
+<pre><code>## Time difference of 17.992 secs</code></pre>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session Information</h2>
@@ -1682,7 +2252,7 @@ devtools::session_info()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/New_York
-##  date     2026-04-16
+##  date     2026-04-22
 ##  pandoc   3.1.1 @ /usr/lib/rstudio-server/bin/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────

@@ -442,6 +442,26 @@ Finally, let's save our phyloseq object, which we will use for the next step!
 
 ```{r save-physeq}
 # Please be sure to use the correct path to the appropriate directory in your file system
+
+#Pull metadata from phyloseq
+meta_df <- data.frame(sample_data(noChlorosMitos_physeq))
+meta_df$SampleID <- rownames(meta_df)
+
+#Split Sample.Name 
+meta_df <- meta_df %>%
+  separate(Sample.Name, into = c("Group", "Replicate"), sep = "_")
+
+#Convert replicate to numeric
+meta_df$Replicate <- as.numeric(meta_df$Replicate)
+
+#Put metadata back into phyloseq
+rownames(meta_df) <- meta_df$SampleID
+sample_data(noChlorosMitos_physeq) <- sample_data(meta_df)
+
+#Check
+sample_data(noChlorosMitos_physeq)
+
+#Save
 preprocessed_physeq <- 
   noChlorosMitos_physeq 
 

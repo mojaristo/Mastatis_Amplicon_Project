@@ -46,15 +46,15 @@ Run an analysis on the within-sample biodiversity of the samples in our project.
 3. Statistical tests conveying the measured and quantified changes and patterns in biodiversity.
 
 # Scientific Question
-How does rumen microbial alpha diversity vary across samples in this dataset, and to what extent is this variation influenced by sequencing depth
+How does rumen microbial alpha diversity vary among the three anonymous sample groups (J, Y, and L)?
 
 ## Question & Hypotheses
 
 ### Null Hypothesis
-There is no meaningful variation in rumen microbial alpha diversity across samples beyond random variation, and alpha diversity is not associated with sequencing depth.
+There are no significant differences in rumen microbial alpha diversity among sample groups J, Y, and L.
 
 ### Alternative Hypothesis
-Rumen microbial alpha diversity varies across samples, and this variation is not solely explained by sequencing depth.
+At least one of the sample groups (J, Y, or L) exhibits significantly different rumen microbial alpha diversity compared with the others.
 
 
 # Set up the Environment 
@@ -543,7 +543,7 @@ simps_ggboxplot <-
           color = "Group", fill = "Group", alpha = 0.3,
           outlier.shape = NA) + 
   # Add points
-  geom_jitter(aes(color = group_colors)) + 
+  geom_jitter(aes(color = Group)) + 
   scale_color_manual(values = group_colors) + 
   scale_fill_manual(values = group_colors) + 
   labs(y = "# of Dominant ASVs (Simpson)") +
@@ -566,6 +566,17 @@ simps_ggboxplot <-
 # Show the plots
 rich_ggboxplot + simps_ggboxplot
 ```
+<span style="color: red;">INTERPRETATION #2:  If you have categorical data, what can you conclude regarding the role that all ASVs (richess, q = 0) versus common ASVs (Shannon, q = 1) versus dominant ASVs (Simpson, q = 2) have on the biodiversity of your samples as it relates to your variable of interest?</span>
+
+- For q = 0: there was a clear difference among groups. Group Y had a substantially lowered observed richness than groups J and L, which were more similar to one another. This suggests that the largest group-level differences are being driven by the presence or absence of less abundant taxa, rather than by major shifts in the dominant members of the community.
+
+- For q = 1: there was not much of a difference among all 3 groups Because Simpson diversity emphasizes dominant taxa, this suggests that the dominant organisms in the communities are comparatively more stable across groups than total richness is.categorical grouping affects the “tail” of the community more strongly than the core dominant structure.
+
+<span style="color: red;">INTERPRETATION #3:  How did you statistically test your scientific question in Interpretation #2? Why?</span>
+
+- The scientific question in Interpretation #2 was tested using analysis of variance (ANOVA), followed by pairwise post hoc comparisons between groups.
+- This was appropriate because the predictor variable, Group, is categorical with three levels (J, Y, and L), while the response variables, such as richness and Simpson diversity, are continuous. ANOVA is designed specifically to test whether the means of a continuous variable differ across more than two groups.
+
 
 
 # Final info for Reproducibility 

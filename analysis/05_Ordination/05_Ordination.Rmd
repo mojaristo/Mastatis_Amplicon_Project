@@ -153,8 +153,8 @@ rawSeq_histogram + rawSeq_vs_numASV_plot +
 <span style="color: red;">INTERPRETATION #2:  Evaluate the raw read count plots above. What did you scale the read counts to in your dataset? Why did you choose that number? What are the potential consequences of this scaling decision for your downstream beta-diversity comparisons?</span>
 
 - The raw sequencing depth plots show that samples vary substantially in read count, with most samples clustering around approximately 12,000–18,000 reads, a few lower-depth samples near 9,000–10,000 reads, and several higher-depth samples extending above 20,000 reads. This indicates uneven sampling effort across the dataset, which must be accounted for before beta-diversity analyses so that differences in library size do not dominate ecological comparisons.
-- For this dataset, I will scale to the nearest threshold above the lowest high quality sample which is 8,642. Thus i will scale to *9,000*
-- Scaling to 9,000 reads helps reduce bias caused by unequal library sizes, making differences among samples more reflective of biological composition rather than sequencing effort
+- For this dataset, I will scale to the nearest threshold above the lowest high quality sample which is 8,642. Thus i will scale to **8,500**
+- Scaling to 8,500 reads helps reduce bias caused by unequal library sizes, making differences among samples more reflective of biological composition rather than sequencing effort
 
 # 3. Scale Read Counts 
 
@@ -230,6 +230,7 @@ scaledSeq_histogram + scaledSeq_vs_numASV_plot +
 - The minimum sequencing depth after scaling was 8,476 reads, and the maximum was 8,757 reads, giving a total range of only 281 reads. This represents approximately 3.2% variation relative to the maximum sequencing depth.
 - The scatterplot of scaled sequencing depth versus observed number of ASVs further shows that there is no longer a strong positive relationship between read depth and richness
 - After scaling, sequencing depth is nearly constant across samples. This means that the remaining differences in richness are more likely to reflect true biological variation among microbial communities rather than technical artifacts caused by uneven sequencing effort.
+
 ## Save Scaled Reads
 
 Please do not forget to save your phyloseq object here for the compositional analysis in our final step! 
@@ -397,7 +398,7 @@ scaled_bray_dist <- phyloseq::distance(scaled_physeq, method = "bray", binary = 
 ```
 <span style="color: red;">INTERPRETATION #4:  Which dissimilarity metric is most related to your scientific question? Why or why not?</span>
 
-- For my data *Bray-Curtis* is the most appropriate. This is because my scientific question asks whether rumen microbial communities differ among the three sample groups (J, Y, and L). This is fundamentally a question about whether groups differ in overall community composition, not simply whether taxa are present or absent
+- For my data **Bray-Curtis** is the most appropriate. This is because my scientific question asks whether rumen microbial communities differ among the three sample groups (J, Y, and L). This is fundamentally a question about whether groups differ in overall community composition, not simply whether taxa are present or absent
 - Bray–Curtis is well suited for this because it uses relative abundance information and measures how similar or different samples are based on the abundances of shared taxa.
 # 5. Visualize Community Dissimilarity with Ordination
 
@@ -514,8 +515,8 @@ sorensen_pcoa_plot + bray_pcoa_plot +
 
 - The Principal Coordinates Analysis (PCoA) plots using both Sorensen dissimilarity (presence–absence based) and Bray–Curtis dissimilarity (abundance-weighted) suggest that the three sample groups (J, L, and Y) do not form strongly distinct microbial community clusters
 - This means that here is substantial overlap among all three groups in ordination space, indicating that the rumen microbiomes are broadly similar in overall composition.
-  - *Sorensen PCoA:* In this ordination, samples from groups J, L, and Y are mixed across both axes, with no clear boundaries separating groups. This suggests that the three groups share many of the same ASVs and that taxa membership is largely similar across samples
-  - *Bray-Curtis PCoA:* The three groups overlap considerably, indicating that dominant community structure is not drastically different among groups
+  - **Sorensen PCoA:** In this ordination, samples from groups J, L, and Y are mixed across both axes, with no clear boundaries separating groups. This suggests that the three groups share many of the same ASVs and that taxa membership is largely similar across samples
+  - **Bray-Curtis PCoA:** The three groups overlap considerably, indicating that dominant community structure is not drastically different among groups
   
 ## 5b. NMDS: Non-Metric Multidimensional Scaling 
 
@@ -583,8 +584,8 @@ sorensen_nmds_plot + bray_nmds_plot +
 - The Non-metric Multidimensional Scaling (NMDS) plots using both Sorensen dissimilarity and Bray–Curtis dissimilarity indicate that the three sample groups (J, L, and Y) do not form strongly separated microbial community clusters. 
 - Similar to the PCoA results, the groups overlap substantially in ordination space, suggesting that overall rumen microbial community composition is broadly shared among groups
 - Stress Test Values are less than 0.2, therefore it is acceptable
-  - *Sorenson:* 0.133
-  - *Bray-Curtis:* 0.184
+  - **Sorenson:** 0.133
+  - **Bray-Curtis:** 0.184
 
 ## All ordinations together!
 
@@ -703,6 +704,14 @@ bray_salGroup_adonis_terms2
 
 Same explanation as Sorenson
 
+<span style="color: red;">INTERPRETATION #8: Using the above example to guide you, please run the appropriate PERMANOVA for your scientific question and interpret the results. If you have more than one variable of interest, please make sure to run your model in at least two different term orders and comment on whether the R-squared value changes between models. If so, what does this tell you about whether your variables are independent of one another or co-varying? What biological conclusion can you draw from your PERMANOVA results, and do you accept or reject your hypothesis?</span>
+
+- Bray–Curtis PERMANOVA found no statistically significant differences in overall rumen microbial community composition among groups J, L, and Y (R² = 0.043, p = 0.129).
+- roup identity explained only a small proportion of total beta-diversity variation, suggesting that most microbiome differences occur among individual samples rather than among groups.
+- I fail to reject the null hypothesis and conclude that the three groups do not possess strongly distinct average microbial communities.
+
+
+
 # 6b. Betadisper: Testing Variances/Dispersions
 
 `betadisper()` is an important companion to PERMANOVA when analyzing beta diversity in microbial ecology. It checks a key assumption of PERMANOVA: homogeneity of group dispersions (variances). **If this assumption is violated, the PERMANOVA results might be driven by differences in spread rather than true differences in community composition.**
@@ -748,6 +757,98 @@ dispr_sorensen_salGroup <- betadisper(scaled_sorensen_dist, metadata_df$Group)
 # permutest() performs a non-parametric permutation test, which is robust and valid for the kind of data used in beta diversity analysis (e.g., dissimilarity matrices).
 permutest(dispr_sorensen_salGroup)
 
+#Post-hoc test: to see which grouo is most dispersed 
+boxplot(dispr_sorensen_salGroup)
+TukeyHSD(dispr_sorensen_salGroup)
 ```
+
+Interpreting `betadisper()/permutest()` results:
+
+**Sorensen:**
+- Sorensen distances found a significant difference among groups (F = 5.56, p = 0.006). This indicates that the spread of microbial communities differs across groups J, L, and Y.
+- Therefore, some groups are more compositionally heterogeneous than others. This suggests that group-level beta-diversity differences may reflect variation in within-group dispersion rather than strong separation of community centroids alone
+
+## Bray-Curtis
+
+Now, let's test the same with Bray-Curtis!
+
+```{r betadisper-bray}
+# Bray-Curtis Betadisper - Group (Categorical)  
+dispr_bray_salGroup <- betadisper(scaled_bray_dist, metadata_df$Group)
+permutest(dispr_bray_salGroup)
+
+#Post-hoc test: to see which grouo is most dispersed 
+boxplot(dispr_bray_salGroup)
+TukeyHSD(dispr_bray_salGroup)
+```
+
+**Bray-Curtis:**
+- Bray-Curtis distances detected significant differences among groups (F = 5.20, p = 0.008). This indicates that the variability of abundance-weighted microbial community composition differs across groups J, L, and Y.
+
+### Comparing Sorensen & Bray Curtis Results 
+
+- Both metrics produced consistent overall conclusions. There was substantial overlap among groups J, L, and Y, indicating that the three groups do not form strongly distinct microbial community clusters.
+- Group differences are driven more by heterogeneity than by clear centroid separation since homogeneity of dispersion tests were significant for both Sorensen (p = 0.006) and Bray–Curtis (p = 0.008)
+- differences among groups likely involve both taxa occurrence and abundance variation rather than one process alone.This is because Sorensen is based on presence–absence, so it reflects whether ASVs are shared among groups. Bray–Curtis includes relative abundance, so it is sensitive to shifts in dominant and common taxa.
+
+# Interpreting PERMANOVA with Betadisper
+
+## What if PERMANOVA and Betadisper tests are both significant?
+
+If **PERMANOVA is significant** _and_ **betadisper is also significant**, it suggests that:
+
+- Your groups **differ in community composition** (centroids), **but** also
+- They may **differ in dispersion** (variance/spread), which can influence the PERMANOVA result
+
+This raises the possibility that the PERMANOVA significance is at least partly driven by **differences in group variability**, not just true compositional shifts.
+
+| Scenario                                       | Interpretation                                                               |
+|------------------------------------------------|-------------------------------------------------------------------------------|
+| ✅ PERMANOVA significant<br>❌ betadisper not significant | Likely true compositional differences (valid PERMANOVA result)                |
+| ✅ PERMANOVA significant<br>✅ betadisper significant     | Differences may be due to dispersion, not centroids — interpret with caution |
+
+**Next steps:**
+
+- Reflect on the ordination plots above to visually assess whether centroids are distinct or just differently dispersed.
+- Plot distances to group centroids.
+- Consider running PERMANOVA on a subset with equal dispersions.
+- Reflect on ecological plausibility: Are the dispersion differences biologically meaningful? Sometimes real biological processes cause both composition shifts and dispersion changes (e.g., disturbance, environmental heterogeneity)! So, don't lose your heart about your data yet! :) 
+
+> Even with unequal dispersion, true ecological differences can still exist — the key is to **interpret with care** and use supporting evidence.
+
+If this happens, the results could be written something like: "*Significant differences in microbial community composition were detected across salinity groups (PERMANOVA: p < 0.001), though within-group dispersion also differed marginally among groups (permutest: p = 0.046-0.05), meaning some salinity environments may harbor inherently more variable communities than others. The consistency of this result across both presence/absence and abundance-based metrics, combined with distinct centroid clustering in ordination space, supports salinity as a genuine driver of community structure. However, interpretations should account for potential heterogeneity in within-group variability.*"
+
+
+<span style="color: red;">INTERPRETATION #9: Using the above example to guide you, run the appropriate betadisper() and permutest() for your scientific question and interpret the results. What biological conclusion can you draw from your dispersion analysis?</span>
+
+*Bray–Curtis PERMANOVA detected no significant difference in average microbial community composition among groups J, L, and Y (R² = 0.043, p = 0.127), indicating that group membership explains only a small proportion of total beta-diversity variation. In contrast, Bray–Curtis betadisper analysis was significant (F = 5.20, p = 0.010), demonstrating unequal within-group dispersion. Pairwise comparisons showed that groups L and Y were significantly more dispersed than group J. Together, these results suggest that the primary group-level signal is not complete compositional separation, but greater microbiome heterogeneity in groups L and Y relative to the more compositionally stable group J.*
+
+<span style="color: red;">INTERPRETATION #10: Taking into account both the betadisper()/permutest() and the PERMANOVA (adonis2()) test that you ran, what biological conclusion can you draw regarding your data?</span>
+
+- This suggests that the core rumen microbiome may be relatively similar across all groups, but the stability or consistency of that microbiome differs. 
+- Group J appears to represent a more uniform microbial state, while groups L and Y may reflect more variable ecological conditions, disease states, dietary influences, or other factors that increase microbiome heterogeneity.
+
+*It is difficult to tell because I do not have the exact metadata labels, therefore my original idea that groups J, Y and L respond to disease state may likely be incorrect*
+
+# Final info for Reproducibility 
+
+## Check Render Time
+```{r stop-time}
+# Take the time now that we are at the end of the script
+end_time <- Sys.time()
+end_time 
+
+# Echo the elapsed time
+elapsed_time <- round((end_time - start_time), 3)
+elapsed_time
+```
+
+## Session Information
+
+```{r session-info}
+# Ensure reproducibility with package version information
+devtools::session_info()
+```
+
 
 

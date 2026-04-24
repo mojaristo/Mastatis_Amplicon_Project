@@ -597,5 +597,157 @@ sorensen_nmds_plot + bray_nmds_plot +
 
 <span style="color: red;">INTERPRETATION #7: Plot both the PCoA and NMDS together. Which of the two ordination methods best represents your data and why? Consider the strengths and limitations of each method. For example, the variance explained by each PCoA axis versus the stress value of the NMDS could be used to justify your choice. Do both methods support the same biological conclusions?</span>
 
+- Both PCoA and NMDS support the same overall biological interpretation:
+  - No strong separation among groups J, L, and Y. Samples from all groups overlap substantially.
+  - Richness differences among groups may exist, but those do not correspond to dramatic whole-community restructuring.
+- PCoA likely provides the most useful representation here because it quantifies variance explained by each axis. First two Bray–Curtis PCoA axes together explain approximately 35% of the total variation, while the Sorensen PCoA explains roughly 28%. although this does not capture all variability in the dataset, it gives a quantitative measure of how much structure is represented in the two-dimensional plot. That makes interpretation more transparent and easier to justify statistically.
+
+# 6. Multivariate Statistics
+
+## 6a. PERMANOVA: Testing Means/Centroids
+
+The goal of PERMANOVA is to ask: *Do the centroids (i.e., means) differ between groups?*  
+
+**PERMANOVA** stands for **Permutational Multivariate Analysis of Variance**. It is a statistical test used in microbial ecology to determine whether the composition of microbial communities differs significantly between groups—for example, between different treatment conditions, time points, or sample types.
+
+Unlike traditional ANOVA, which compares means of univariate data, PERMANOVA works on a **distance or dissimilarity matrix** (like Bray-Curtis or UniFrac). It assesses whether the **centroids** (multivariate means) of different groups in that distance space are significantly farther apart than we’d expect by chance. The test uses permutations to randomly shuffle group labels and calculate a distribution of test statistics, allowing it to compute a **p-value** without assuming normality—making it well-suited for ecological data, which are often non-normal and complex.
+
+To run PERMANOVA, we will first compute a dissimilarity matrix between all pairs of samples (like we just did! 😁), and then test whether the variation **between groups** is greater than the variation **within groups**. A low p-value (typically < 0.05) suggests that community composition differs significantly between the groups being compared.
+
+However, PERMANOVA is **sensitive to differences in within-group dispersion** (*i.e.,* variability). If one group is much more variable than another, PERMANOVA might detect a significant result even if the centroids aren't truly different. Because of this, it's good practice to also run a **test for homogeneity of dispersion** (*e.g.,* `betadisper` in R) to check that group variances are comparable, which we will do next!
+
+**Key Parameters in `adonis2()`**
+- `strata`: Use strata to restrict permutations within groups, which is critical for paired or repeated measures designs. This would be a column in the `metadata_df`.
+    - example: `strata = metadata_df$Sample_Names`
+- `by`: Specifies how model terms are tested. It can be: 
+    - `by = "terms"`: (default) tests each term sequentially. Therefore, it is sensitive to the order in which we put the varaibles into the model. 
+    - `by = "margin"`: tests each term while adjusting for others (like Type III sum of squares). Using `margin` ensures that each term is tested independently of the others—especially important when interactions are included or the design is unbalanced.
+    - `by = "none"`: tests only the full model.
+- `parallel`: Runs permutations using multiple CPU cores. This is helpful for large datasets or when using a large number of permutations.
+
+**Summary Table of Useful `adonis2()` Parameters**
+
+| Parameter      | Purpose                                           | When to Use                                                   |
+|----------------|---------------------------------------------------|----------------------------------------------------------------|
+| `permutations` | Number of permutations for p-value calculation   | Always (use 9999+ for more stable results)                     |
+| `strata`       | Restrict permutations within groups               | For paired samples, repeated measures, or blocks               |
+| `by`           | Controls how model terms are tested              | Use `"margin"` to test each variable while adjusting for others |
+| `method`       | Calculate distance matrix internally              | Only if supplying a raw OTU/ASV table                          |
+| `sqrt.dist`    | Apply square-root transformation to distances     | Rarely needed; used in specific workflows                      |
+| `parallel`     | Run permutations using multiple CPU cores         | Speeds up large analyses with many permutations                |
+
+**Categorical & Continuous Variables in PERMANOVA**
+
+`adonis2()` can also be run on continuous variables — and it’s actually a powerful way to test whether variation in microbial community composition is associated with continuous environmental or biological gradients (*e.g.,* pH, temperature, nutrient concentration, latitude, host age, etc.). In `adonis2()`, continuous variables are treated as predictors in a linear model-like framework. The test evaluates whether changes in the continuous variable are significantly associated with shifts in microbial community composition (as measured by your distance matrix).
+
+For now, we will focus on comparing the Sorensen and the Bray-Curtis.  
+
+### 6a-I. Categorical Variables
+
+Here, we will focus on the categorical data of salinity group to test the hypothesis. Below, we will focus on Continuous variables.
+
+#### Sorensen
+
+```{r PERMANOVA-categorical-sorensen}
+# Sorensen
+## 1. Run with by = terms for R² values, sensitive to order of variables! 
+## ALWAYS check and confirm the order of your terms and how they interact with each other.
+
+#make a metadata_df 
+
+metadata_df <- 
+  preprocessed_physeq %>%
+  sample_data() %>%
+  data.frame()
+
+sorensen_salGroup_adonis_terms1 <- adonis2(scaled_sorensen_dist ~ Group, data = metadata_df, by = "terms")
+sorensen_salGroup_adonis_terms1
+
+# Check the order of the terms
+sorensen_salGroup_adonis_terms2 <- adonis2(scaled_sorensen_dist ~ Group, data = metadata_df, by = "terms")
+sorensen_salGroup_adonis_terms2
+```
+**Understanding PERMANOVA output:**
+
+- **Pr(>F) Interpretation:** The p-value. Is it "*significant*"?  
+    - This represents the "*probability of observing an F-statistic this extreme (or more extreme), assuming the null hypothesis is true.*" In essence, this is the **p-value** from the permutation test. This value tells us whether the variance explained by a variable (or interaction) is significantly greater than expected by chance.
+- **R^2^ value Interpretation:** How much variation is explained by this variable—an effect size.
+    - Not dependent on sample size. 
+    - Interpretable across studies! 
+    - R^2^ (also called “pseudo R^2^” in PERMANOVA) is the proportion of total variation in the multivariate data that is explained by a specific variable or interaction.
+        - R^2^ = 0.25 means that the term explains 25% of the variation in the community composition.
+        - R^2^ = 0.03 means that the term explains only 3% of variation — possibly statistically significant but a small effect. This is important because 3% is not much variation! So, therefore, even it if is *significant* based on the p-value, it explains an *insignificant* amount of variation. 
+- **F-statistic Interpretation:** How strongly a variable separates groups, relative to residuals. 
+    - Higher F-values tell us that there is stronger separation of groups. he F-statistic is a ratio of explained to unexplained variation, adjusted for degrees of freedom — similar to traditional ANOVA, but applied to a distance matrix (like Bray-Curtis, Jaccard, *etc.*). It tells you how much more variation is explained by the model (with your term included) compared to the residual (unexplained) variation.
+
+***Interpreting PERMANOVA with Sorensen Dissimilarity:***
+
+So, as it applies to the Sorensen Dissimilarity, we can already draw a few conclusions about our data! We can state that: 
+
+1. The Group Name (J,L or Y) does not impact variation in the microbial communities, theferfore they do not correspond to any disease state (as was the prior thought)
+2. But exclusively looking at Group data, there seems to be no known factor that affects variation in microbial communities (more metadata needed)
+
+#### Bray-Curtis
+
+```{r PERMANOVA-categorical-bray}
+# Bray-Curtis
+## ALWAYS check and confirm the order of your terms and how they interact with each other.  
+bray_salGroup_adonis_terms1 <- adonis2(scaled_bray_dist ~ Group, data = metadata_df, by = "terms")
+bray_salGroup_adonis_terms1
+
+bray_salGroup_adonis_terms2 <- adonis2(scaled_bray_dist ~ Group, data = metadata_df, by = "terms")
+bray_salGroup_adonis_terms2
+```
+
+**Interpreting PERMANOVA with Bray-Curtis Dissimilarity:**
+
+Same explanation as Sorenson
+
+# 6b. Betadisper: Testing Variances/Dispersions
+
+`betadisper()` is an important companion to PERMANOVA when analyzing beta diversity in microbial ecology. It checks a key assumption of PERMANOVA: homogeneity of group dispersions (variances). **If this assumption is violated, the PERMANOVA results might be driven by differences in spread rather than true differences in community composition.**
+
+We will use the `betadisper()` and then the `permutest()` functions from the vegan package in R, which will perform an analysis of multivariate homogeneity of group dispersions—also called a PERMDISP test. It will: 
+
+First, `betadisper()` will perform the following steps: 
+
+1.	Input: A distance matrix (e.g., from vegdist() or phyloseq::distance()) and a grouping factor (e.g., station).
+2.	Calculate the centroid of each group in multivariate space (via PCoA).
+3.	Compute the distance from each sample to its group’s centroid.
+4.	Store those distances — these are the within-group dispersions.
+
+Note that the `betadisper()` function does not test for significance. It just computes the distances (dispersion) and organizes them into a model object. So, once `betadisper()` has calculated the within-group distances, `permutest()` will need to be run to test whether those dispersions differ significantly between groups using a permutation-based ANOVA.
+
+Second, `permutest()` will perform the following steps: 
+
+1.	Null hypothesis (H~0~): All groups have equal multivariate dispersion.
+2.	Observed F-statistic is calculated from the variation among group dispersions.
+3.	Permutations: Group labels are shuffled many times (*e.g.,* 999 times).
+4.	For each permutation, a new F-statistic is calculated.
+5.	The p-value is the proportion of permutations where the F is as extreme or more extreme than the observed F.
+
+The result from `permutest()`is a robust non-parametric p-value testing whether dispersion differs across groups.
+
+**Always run `betadisper()` and `permutest()` after PERMANOVA** to test whether the groups have similar within-group variation.
+
+- If p > 0.05 (not significant), the PERMANOVA result is reliable.
+- If p < 0.05 (significant), be cautious—group differences may be due to dispersion, not composition! However, not all is lost as we may expect this to be biologically true.  
+
+**In Summary:**
+
+| Function       | What it does                                                  | Significance test? | Output includes                    |
+|----------------|---------------------------------------------------------------|---------------------|------------------------------------|
+| `betadisper()` | Computes within-group distances to centroids (dispersion)     | ❌ No                | Distances, centroids, model object |
+| `permutest()`  | Tests if group dispersions differ using permutations          | ✅ Yes               | F-value, permutation-based p-value |
+
+### Sorensen
+```{r betadisper-sorensen}
+# Homogeneity of Disperson test with beta dispr
+# Sorensen Betadisper - Group type (Categorical) 
+dispr_sorensen_salGroup <- betadisper(scaled_sorensen_dist, metadata_df$Group)
+# permutest() performs a non-parametric permutation test, which is robust and valid for the kind of data used in beta diversity analysis (e.g., dissimilarity matrices).
+permutest(dispr_sorensen_salGroup)
+
+```
 
 

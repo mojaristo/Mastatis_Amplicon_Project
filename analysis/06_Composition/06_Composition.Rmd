@@ -19,7 +19,7 @@ editor_options:
 ---
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
-                      fig.path = "../../figures/Lecture/06_Composition_Lecture/")
+                      fig.path = "../../figures/06_Composition/")
 ```
 
 # Goals
@@ -163,9 +163,99 @@ phylum_group_df %>%
   )
 
 ```
+## A2: Top 10 ASVs
+
+Now, let's take a look at the ASVs. This is where the *real* ecology/biology happens! This is because the ASV-level plots will provide us with a more detailed view of **which specific taxa (ASVs) are driving the overall trends seen at the higher taxonomic levels (e.g. phylum)** in relation to salinity gradients and station differences.
+
+Before we calculate the ASV-level abundances, let's take a second to think about *who* we'd like to consider. There's a lot of ASVs! In fact, there are `r ntaxa(scaled_physeq)`! It is difficult analyze all of them! Therefore, we will remove ASVs that have an overall count across the entire dataset of 211 or 1% of a scaled sample to 2,107 This is a little arbitrary and therefore, you may choose a different threshold for your dataset. The goal here is to **dramatically decreases the number of ASVs in the dataset** to help make the ASV-level data analysis much easier. 
+
+Of course, if we had more time in class, we could run differential abundance and this would also help us to identify and statistically test which ASVs are important and also help us narrow on specific ASVs. 
+
+The goal with this lesson is to do some data exploration and then also test ASVs that are relevant for our specific study. Let's go! 
+
+```{r calc-ASVs, fig.width=12, fig.height=4}
+# Calculate the Family relative abundance 
+# Note: The read depth MUST be normalized in some way: scale_reads
+ASV_df <- 
+  scaled_physeq %>%
+  # Prune out ASVs that have fewer than ~1%! 
+  ## LOOK AT HOW MANY ARE REMOVED! We scaled to 2,107 reads! 
+  prune_taxa(taxa_sums(.) >= 211, .) %>%
+  # agglomerate at the phylum level 
+  tax_glom(taxrank = "ASV") %>% 
+  # Transform counts to relative abundance 
+  transform_sample_counts(function (x) {x/sum(x)}) %>%
+  # Melt to a long format 
+  psmelt() 
+
+# Make a list of phyla the top 10 ASVs in the Dataset
+top10_ASVs <- 
+  ASV_df %>%
+  group_by(ASV) %>%
+  summarize(mean_PercAbund = mean(Abundance)) %>%
+  arrange(-mean_PercAbund) %>%
+  head(n = 10) %>%
+  pull(ASV)
+
+# show it 
+top10_ASVs
+```
+
+```{r plot-Top10-ASVs-salGroup, fig.width=12, fig.height=9}
+### Plot the Top 10 ASVs
+ASV_df %>%
+  dplyr::filter(ASV %in% top10_ASVs) %>%
+  ggplot(aes(x = Group, y = Abundance, fill = Phylum, color = Phylum)) + 
+  facet_wrap(ASV~Genus, scales = "free", nrow = 3) + 
+  # add the stacked bar 
+  geom_jitter() +
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+  # change the colors to be our selected colors 
+  scale_fill_manual(values = phylum_colors) + 
+  scale_color_manual(values = phylum_colors) + 
+  theme_bw() + 
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+```
+# B. ASV-Level
+
+## B1. Bacteroidota
+```{r bacter-asvs, fig.width=10, fig.height=8}
+# Calculate top couple of ASVs 
+# Make a list of phyla the top phyla 
+top_bacter_ASVs <- 
+  ASV_df %>%
+  dplyr::filter(Phylum == "Bacteroidota") %>%
+  group_by(ASV) %>%
+  summarize(mean_Abundance = mean(Abundance)) %>%
+  dplyr::filter(mean_Abundance > 0.005) %>%
+  pull(ASV)
+
+# Bacteroidota
+# Plot ASVs 
+bacter_asv_Group <- 
+  ASV_df %>%
+  dplyr::filter(ASV %in% top_bacter_ASVs) %>%
+  # build the plot 
+  ggplot(aes(x = Group, y = Abundance, 
+             fill = Group, color = Group)) + 
+  facet_wrap(Genus~ASV, scales = "free_y", nrow = 2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) + # outliers not plotted here in boxplot 
+  geom_jitter() + 
+  theme_bw() + 
+  labs(title = "Bacteroidota ASVs") + 
+  scale_color_manual(values = group_colors) + 
+  scale_fill_manual(values = group_colors) + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = "none")
 
 
-
+# Collect the Bacteroidota Plots
+bacter_asv_Group  + 
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+```
 
 
 

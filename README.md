@@ -22,21 +22,23 @@ targeting the V3–V4 region using 338F/806R primers. Sequencing Platform: Illum
 MiSeq (2 x 300bp)
 
 # Scientific Question
-How does rumen microbial alpha diversity vary across samples in this dataset, and to what extent is this variation influenced by sequencing depth?
+How does rumen microbial alpha diversity vary across samples in this dataset, and to which taxa are abundant across communities?
 
-#Response Variable
+# Response Variable
 - Observed Richness
 - Alpha diversity (Shannon diversityn index) 
 - Simpson diversity index
 
-#Predictor Variable
-- Total reads per sample i.e., Sequencing depth: (Continuous Variable)
+# Predictor Variable
+- Group subdivisions (i.e., J, L and Y)
 
 # Hypothesis
 
 ## Null Hypothesis
-There is no meaningful variation in rumen microbial alpha diversity across samples 
-beyond random variation, and alpha diversity is not associated with sequencing depth. 
-## Alternative Hypothesis Rumen microbial alpha diversity varies across samplesy, and 
-this variation is not solely explained by sequencing depth.
+- There is no meaningful variation in rumen microbial alpha diversity across samples 
+beyond random variationh.
+ 
+## Alternative Hypothesis
+-  Rumen microbial alpha diversity varies across samples, and 
+there is a heterogeneous composition of taxa.
 
